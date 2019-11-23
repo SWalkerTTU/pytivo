@@ -9,9 +9,12 @@ import sys
 import uuid
 from configparser import NoOptionError
 from functools import reduce
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 tivos: Dict[str, Any]
+guid: uuid.UUID
+config_files: List[str]
+tivos_found: bool
 
 class Bdict(dict):
     def getboolean(self, x):

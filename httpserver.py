@@ -12,7 +12,7 @@ from io import StringIO, BytesIO
 from email.utils import formatdate
 from urllib.parse import unquote_plus, quote
 from xml.sax.saxutils import escape
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 
 from Cheetah.Template import Template  # type: ignore
 import config
@@ -84,7 +84,7 @@ class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 
 class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
-    def __init__(self, request, client_address, server: TivoHTTPServer):
+    def __init__(self, request: bytes, client_address: Tuple[str, int], server: TivoHTTPServer):
         self.wbufsize = 0x10000
         self.server_version = "pyTivo/1.0"
         self.protocol_version = "HTTP/1.1"
@@ -94,18 +94,18 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
             self, request, client_address, server
         )
 
-    def address_string(self):
+    def address_string(self) -> str:
         host, port = self.client_address[:2]
         return host
 
-    def version_string(self):
+    def version_string(self) -> str:
         """ Override version_string() so it doesn't include the Python 
             version.
 
         """
         return self.server_version
 
-    def do_GET(self):
+    def do_GET(self) -> None:
         tsn = self.headers.get("TiVo_TCD_ID", self.headers.get("tsn", ""))
         if not self.authorize(tsn):
             return
@@ -141,12 +141,12 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         if not self.authorize(tsn):
             return
         ctype, pdict = cgi.parse_header(self.headers.get("content-type"))
-        pdict_bytes = {key:val.encode('utf-8') for (key,val) in pdict.items()}
+        pdict_bytes = {key: val.encode("utf-8") for (key, val) in pdict.items()}
         if ctype == "multipart/form-data":
             query = cgi.parse_multipart(self.rfile, pdict_bytes)
         else:
             length = int(self.headers.get("content-length"))
-            qs = self.rfile.read(length).decode('utf-8')
+            qs = self.rfile.read(length).decode("utf-8")
             query = cgi.parse_qs(qs, keep_blank_values=True)
         self.handle_query(query, tsn)
 
