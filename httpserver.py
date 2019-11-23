@@ -8,7 +8,7 @@ import os
 import shutil
 import socket
 import time
-from io import StringIO
+from io import StringIO, BytesIO
 from email.utils import formatdate
 from urllib.parse import unquote_plus, quote
 from xml.sax.saxutils import escape
@@ -277,10 +277,11 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                                 self.log_date_time_string(), format%args))
 
     def send_fixed(self, page, mime, code=200, refresh=''):
+        page = page.encode()
         squeeze = (len(page) > 256 and mime.startswith('text') and
             'gzip' in self.headers.get('Accept-Encoding', ''))
         if squeeze:
-            out = StringIO()
+            out = BytesIO()
             gzip.GzipFile(mode='wb', fileobj=out).write(page)
             page = out.getvalue()
             out.close()
@@ -314,10 +315,11 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                     settings['content_type'] = mime
                     tsncontainers.append((section, settings))
             except Exception as msg:
-                self.server.logger.error(section + ' - ' + str(msg))
+                self.server.logger.error(section + ' - ' + str(msg), exc_info=True)
         t = Template(file=os.path.join(SCRIPTDIR, 'templates',
                                        'root_container.tmpl'),
-                     filter=EncodeUnicode)
+                     #filter=EncodeUnicode)
+                     )
         if self.server.beacon.bd:
             t.renamed = self.server.beacon.bd.renamed
         else:
@@ -331,7 +333,8 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
     def infopage(self):
         t = Template(file=os.path.join(SCRIPTDIR, 'templates',
                                        'info_page.tmpl'),
-                     filter=EncodeUnicode)
+                     #filter=EncodeUnicode)
+                     )
         t.admin = ''
 
         if config.get_server('tivo_mak') and config.get_server('togo_path'):
