@@ -9,7 +9,9 @@ import sys
 import uuid
 from configparser import NoOptionError
 from functools import reduce
+from typing import Dict, Any
 
+tivos: Dict[str, Any]
 
 class Bdict(dict):
     def getboolean(self, x):

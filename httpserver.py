@@ -12,6 +12,7 @@ from io import StringIO, BytesIO
 from email.utils import formatdate
 from urllib.parse import unquote_plus, quote
 from xml.sax.saxutils import escape
+from typing import Dict, Any
 
 from Cheetah.Template import Template  # type: ignore
 import config
@@ -52,6 +53,7 @@ UNSUP = "<h3>Unsupported Command</h3> <p>Query:</p> <ul>%s</ul>"
 class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     def __init__(self, server_address, RequestHandlerClass):
         self.containers = {}
+        self.beacon = None
         self.stop = False
         self.restart = False
         self.logger = logging.getLogger("pyTivo")
@@ -82,11 +84,12 @@ class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 
 class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
-    def __init__(self, request, client_address, server):
+    def __init__(self, request, client_address, server: TivoHTTPServer):
         self.wbufsize = 0x10000
         self.server_version = "pyTivo/1.0"
         self.protocol_version = "HTTP/1.1"
         self.sys_version = ""
+        self.server: TivoHTTPServer
         http.server.BaseHTTPRequestHandler.__init__(
             self, request, client_address, server
         )
@@ -262,7 +265,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         ## Give up
         self.send_error(404)
 
-    def authorize(self, tsn=None):
+    def authorize(self, tsn=None) -> bool:
         # if allowed_clients is empty, we are completely open
         allowed_clients = config.getAllowedClients()
         if not allowed_clients or (tsn and config.isTsnInConfig(tsn)):
@@ -281,7 +284,8 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
             % (self.address_string(), self.log_date_time_string(), format % args)
         )
 
-    def send_fixed(self, page, mime, code=200, refresh=""):
+    # TODO: decide if page is str or bytes
+    def send_fixed(self, page, mime: str, code: int = 200, refresh: str = "") -> None:
         page = page.encode()
         squeeze = (
             len(page) > 256
@@ -295,7 +299,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
             out.close()
         self.send_response(code)
         self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", len(page))
+        self.send_header("Content-Length", str(len(page)))
         if squeeze:
             self.send_header("Content-Encoding", "gzip")
         self.send_header("Expires", "0")
@@ -305,13 +309,15 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(page)
         self.wfile.flush()
 
-    def send_xml(self, page):
+    # TODO: decide if page is str or bytes
+    def send_xml(self, page) -> None:
         self.send_fixed(page, "text/xml")
 
-    def send_html(self, page, code=200, refresh=""):
+    # TODO: decide if page is str or bytes
+    def send_html(self, page, code: int = 200, refresh: str = "") -> None:
         self.send_fixed(page, "text/html; charset=utf-8", code, refresh)
 
-    def root_container(self):
+    def root_container(self) -> None:
         tsn = self.headers.get("TiVo_TCD_ID", "")
         tsnshares = config.getShares(tsn)
         tsncontainers = []
@@ -337,7 +343,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         t.quote = quote
         self.send_xml(str(t))
 
-    def infopage(self):
+    def infopage(self) -> None:
         t = Template(
             file=os.path.join(SCRIPTDIR, "templates", "info_page.tmpl"),
             # filter=EncodeUnicode)
@@ -374,7 +380,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
 
         self.send_html(str(t))
 
-    def unsupported(self, query):
+    def unsupported(self, query: Dict[str, Any]) -> None:
         message = UNSUP % "\n".join(
             [
                 "<li>%s: %s</li>" % (key, repr(value))
@@ -384,7 +390,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         text = BASE_HTML % message
         self.send_html(text, code=404)
 
-    def redir(self, message, seconds=2):
+    def redir(self, message: str, seconds: int = 2) -> None:
         url = self.headers.get("Referer")
         if url:
             message += RELOAD % (url, seconds)
