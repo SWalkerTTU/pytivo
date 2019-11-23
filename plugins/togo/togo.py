@@ -1,14 +1,14 @@
 import cgi
-import cookielib
+import http.cookiejar
 import logging
 import os
 import subprocess
 import sys
-import thread
+import _thread
 import time
-import urllib2
-import urlparse
-from urllib import quote, unquote
+import urllib.request, urllib.error, urllib.parse
+import urllib.parse
+from urllib.parse import quote, unquote
 from xml.dom import minidom
 
 from Cheetah.Template import Template
@@ -65,15 +65,15 @@ basic_meta = {} # Data from NPL, parsed, indexed by progam URL
 details_urls = {} # URLs for extended data, indexed by main URL
 
 def null_cookie(name, value):
-    return cookielib.Cookie(0, name, value, None, False, '', False, 
+    return http.cookiejar.Cookie(0, name, value, None, False, '', False, 
         False, '', False, False, None, False, None, None, None)
 
-auth_handler = urllib2.HTTPPasswordMgrWithDefaultRealm()
-cj = cookielib.CookieJar()
+auth_handler = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+cj = http.cookiejar.CookieJar()
 cj.set_cookie(null_cookie('sid', 'ADEADDA7EDEBAC1E'))
-tivo_opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj), 
-                                   urllib2.HTTPBasicAuthHandler(auth_handler),
-                                   urllib2.HTTPDigestAuthHandler(auth_handler))
+tivo_opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj), 
+                                   urllib.request.HTTPBasicAuthHandler(auth_handler),
+                                   urllib.request.HTTPDigestAuthHandler(auth_handler))
 
 tsn = config.get_server('togo_tsn')
 if tsn:
@@ -90,7 +90,7 @@ class ToGo(Plugin):
                 return tivo_opener.open(url)
 
             # Do a retry if the TiVo responds that the server is busy
-            except urllib2.HTTPError, e:
+            except urllib.error.HTTPError as e:
                 if e.code == 503:
                     time.sleep(5)
                     continue
@@ -129,7 +129,7 @@ class ToGo(Plugin):
             theurl = baseurl
             if 'Folder' in query:
                 folder = query['Folder'][0]
-                theurl = urlparse.urljoin(theurl, folder)
+                theurl = urllib.parse.urljoin(theurl, folder)
             theurl += '&ItemCount=%d' % shows_per_page
             if 'AnchorItem' in query:
                 theurl += '&AnchorItem=' + quote(query['AnchorItem'][0])
@@ -142,7 +142,7 @@ class ToGo(Plugin):
                 auth_handler.add_password('TiVo DVR', ip_port, 'tivo', tivo_mak)
                 try:
                     page = self.tivo_open(theurl)
-                except IOError, e:
+                except IOError as e:
                     handler.redir(UNABLE % (tivoIP, cgi.escape(str(e))), 10)
                     return
                 tivo_cache[theurl] = {'thepage': minidom.parse(page),
@@ -199,7 +199,7 @@ class ToGo(Plugin):
                         entry['CaptureDate'] = time.strftime('%b %d, %Y',
                             time.localtime(int(entry['CaptureDate'], 16)))
 
-                    url = urlparse.urljoin(baseurl, entry['Url'])
+                    url = urllib.parse.urljoin(baseurl, entry['Url'])
                     entry['Url'] = url
                     if url in basic_meta:
                         entry.update(basic_meta[url])
@@ -244,9 +244,9 @@ class ToGo(Plugin):
         # global status
         status[url].update({'running': True, 'queued': False})
 
-        parse_url = urlparse.urlparse(url)
+        parse_url = urllib.parse.urlparse(url)
 
-        name = unicode(unquote(parse_url[2]), 'utf-8').split('/')[-1].split('.')
+        name = str(unquote(parse_url[2]), 'utf-8').split('/')[-1].split('.')
         try:
             id = unquote(parse_url[4]).split('id=')[1]
             name.insert(-1, ' - ' + id)
@@ -287,7 +287,7 @@ class ToGo(Plugin):
                 handle = self.tivo_open(url + '&Format=video/x-tivo-mpeg-ts')
             else:
                 handle = self.tivo_open(url)
-        except Exception, msg:
+        except Exception as msg:
             status[url]['running'] = False
             status[url]['error'] = str(msg)
             return
@@ -329,7 +329,7 @@ class ToGo(Plugin):
                     last_interval = now
             if status[url]['running']:
                 status[url]['finished'] = True
-        except Exception, msg:
+        except Exception as msg:
             status[url]['running'] = False
             logger.info(msg)
         handle.close()
@@ -384,12 +384,12 @@ class ToGo(Plugin):
                     queue[tivoIP].append(theurl)
                 else:
                     queue[tivoIP] = [theurl]
-                    thread.start_new_thread(ToGo.process_queue,
+                    _thread.start_new_thread(ToGo.process_queue,
                                             (self, tivoIP, tivo_mak, togo_path))
                 logger.info('[%s] Queued "%s" for transfer to %s' %
                             (time.strftime('%d/%b/%Y %H:%M:%S'),
                              unquote(theurl), togo_path))
-            urlstring = '<br>'.join([unicode(unquote(x), 'utf-8')
+            urlstring = '<br>'.join([str(unquote(x), 'utf-8')
                                      for x in urls])
             message = TRANS_QUEUE % (urlstring, togo_path)
         else:

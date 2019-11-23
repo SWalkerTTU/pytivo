@@ -81,7 +81,7 @@ def transcode(isQuery, inFile, outFile, tsn='', mime='', thead=''):
 
     ffmpeg_path = config.get_bin('ffmpeg')
 
-    fname = unicode(inFile, 'utf-8')
+    fname = str(inFile, 'utf-8')
     if mswindows:
         fname = fname.encode('cp1252')
 
@@ -142,7 +142,7 @@ def resume_transfer(inFile, outFile, offset):
                 count += len(block)
             offset -= length
         outFile.flush()
-    except Exception, msg:
+    except Exception as msg:
         logger.info(msg)
         return count
 
@@ -160,7 +160,7 @@ def transfer_blocks(inFile, outFile):
         try:
             block = proc['process'].stdout.read(BLOCKSIZE)
             proc['last_read'] = time.time()
-        except Exception, msg:
+        except Exception as msg:
             logger.info(msg)
             cleanup(inFile)
             kill(proc['process'])
@@ -169,7 +169,7 @@ def transfer_blocks(inFile, outFile):
         if not block:
             try:
                 outFile.flush()
-            except Exception, msg:
+            except Exception as msg:
                 logger.info(msg)
             else:
                 cleanup(inFile)
@@ -186,7 +186,7 @@ def transfer_blocks(inFile, outFile):
             outFile.write(block)
             outFile.write('\r\n')
             count += len(block)
-        except Exception, msg:
+        except Exception as msg:
             logger.info(msg)
             break
 
@@ -652,7 +652,7 @@ def tivo_compatible(inFile, tsn='', mime=''):
 
 def video_info(inFile, cache=True):
     vInfo = dict()
-    fname = unicode(inFile, 'utf-8')
+    fname = str(inFile, 'utf-8')
     mtime = os.path.getmtime(fname)
     if cache:
         if inFile in info_cache and info_cache[inFile][0] == mtime:
@@ -683,7 +683,7 @@ def video_info(inFile, cache=True):
     # wait configured # of seconds: if ffmpeg is not back give up
     limit = config.getFFmpegWait()
     if limit:
-        for i in xrange(limit * 20):
+        for i in range(limit * 20):
             time.sleep(.05)
             if not ffmpeg.poll() == None:
                 break
@@ -877,9 +877,9 @@ def video_info(inFile, cache=True):
             if key.startswith('Override_mapAudio'):
                 audiomap = dict(vInfo['mapAudio'])
                 newmap = shlex.split(data[key])
-                audiomap.update(zip(newmap[::2], newmap[1::2]))
-                vInfo['mapAudio'] = sorted(audiomap.items(),
-                                           key=lambda (k,v): (k,v))
+                audiomap.update(list(zip(newmap[::2], newmap[1::2])))
+                vInfo['mapAudio'] = sorted(list(audiomap.items()),
+                                           key=lambda k_v: (k_v[0],k_v[1]))
             elif key.startswith('Override_millisecs'):
                 vInfo[key.replace('Override_', '')] = int(data[key])
             else:
@@ -887,13 +887,13 @@ def video_info(inFile, cache=True):
 
     if cache:
         info_cache[inFile] = (mtime, vInfo)
-    debug("; ".join(["%s=%s" % (k, v) for k, v in vInfo.items()]))
+    debug("; ".join(["%s=%s" % (k, v) for k, v in list(vInfo.items())]))
     return vInfo
 
 def audio_check(inFile, tsn):
     cmd_string = ('-y -c:v mpeg2video -r 29.97 -b:v 1000k -c:a copy ' +
                   select_audiolang(inFile, tsn) + ' -t 00:00:01 -f vob -')
-    fname = unicode(inFile, 'utf-8')
+    fname = str(inFile, 'utf-8')
     if mswindows:
         fname = fname.encode('cp1252')
     cmd = [config.get_bin('ffmpeg'), '-i', fname] + cmd_string.split()
@@ -925,7 +925,7 @@ def kill(popen):
         win32kill(popen.pid)
     else:
         import os, signal
-        for i in xrange(3):
+        for i in range(3):
             debug('sending SIGTERM to pid: %s' % popen.pid)
             os.kill(popen.pid, signal.SIGTERM)
             time.sleep(.5)

@@ -33,8 +33,8 @@ import tempfile
 import threading
 import time
 import unicodedata
-import urllib
-from cStringIO import StringIO
+import urllib.request, urllib.parse, urllib.error
+from io import StringIO
 from xml.sax.saxutils import escape
 
 use_pil = True
@@ -45,7 +45,7 @@ except ImportError:
         import Image
     except ImportError:
         use_pil = False
-        print 'Python Imaging Library not found; using FFmpeg'
+        print('Python Imaging Library not found; using FFmpeg')
 
 import config
 from Cheetah.Template import Template
@@ -171,14 +171,14 @@ class Photo(Plugin):
     def get_image_pil(self, path, width, height, pshape, rot, attrs):
         # Load
         try:
-            pic = Image.open(unicode(path, 'utf-8'))
-        except Exception, msg:
+            pic = Image.open(str(path, 'utf-8'))
+        except Exception as msg:
             return False, 'Could not open %s -- %s' % (path, msg)
 
         # Set draft mode
         try:
             pic.draft('RGB', (width, height))
-        except Exception, msg:
+        except Exception as msg:
             return False, 'Failed to set draft mode for %s -- %s' % (path, msg)
 
         # Read Exif data if possible
@@ -189,14 +189,14 @@ class Photo(Plugin):
         try:
             if rot:
                 pic = pic.rotate(rot)
-        except Exception, msg:
+        except Exception as msg:
             return False, 'Rotate failed on %s -- %s' % (path, msg)
 
         # De-palletize
         try:
             if pic.mode not in ('RGB', 'L'):
                 pic = pic.convert('RGB')
-        except Exception, msg:
+        except Exception as msg:
             return False, 'Palette conversion failed on %s -- %s' % (path, msg)
 
         # Old size
@@ -206,7 +206,7 @@ class Photo(Plugin):
 
         try:
             pic = pic.resize((width, height), Image.ANTIALIAS)
-        except Exception, msg:
+        except Exception as msg:
             return False, 'Resize failed on %s -- %s' % (path, msg)
 
         # Re-encode
@@ -215,7 +215,7 @@ class Photo(Plugin):
             pic.save(out, 'JPEG', quality=85)
             encoded = out.getvalue()
             out.close()
-        except Exception, msg:
+        except Exception as msg:
             return False, 'Encode failed on %s -- %s' % (path, msg)
 
         return True, encoded
@@ -232,7 +232,7 @@ class Photo(Plugin):
         # wait configured # of seconds: if ffmpeg is not back give up
         limit = config.getFFmpegWait()
         if limit:
-            for i in xrange(limit * 20):
+            for i in range(limit * 20):
                 time.sleep(.05)
                 if not ffmpeg.poll() == None:
                     break
@@ -261,7 +261,7 @@ class Photo(Plugin):
         if not ffmpeg_path:
             return False, 'FFmpeg not found'
 
-        fname = unicode(path, 'utf-8')
+        fname = str(path, 'utf-8')
         if sys.platform == 'win32':
             fname = fname.encode('cp1252')
 
@@ -308,7 +308,7 @@ class Photo(Plugin):
         # wait configured # of seconds: if ffmpeg is not back give up
         limit = config.getFFmpegWait()
         if limit:
-            for i in xrange(limit * 20):
+            for i in range(limit * 20):
                 time.sleep(.05)
                 if not ffmpeg.poll() == None:
                     break
@@ -428,14 +428,14 @@ class Photo(Plugin):
         t.container = handler.cname
         t.files, t.total, t.start = self.get_files(handler, query,
             ImageFileFilter)
-        t.files = map(media_data, t.files)
+        t.files = list(map(media_data, t.files))
         t.quote = quote
         t.escape = escape
 
         handler.send_xml(str(t))
 
     def QueryItem(self, handler, query):
-        uq = urllib.unquote_plus
+        uq = urllib.parse.unquote_plus
         splitpath = [x for x in uq(query['Url'][0]).split('/') if x]
         path = os.path.join(handler.container['path'], *splitpath[1:])
 
@@ -453,7 +453,7 @@ class Photo(Plugin):
             def __init__(self, name, isdir):
                 self.name = name
                 self.isdir = isdir
-                st = os.stat(unicode(name, 'utf-8'))
+                st = os.stat(str(name, 'utf-8'))
                 self.cdate = st.st_ctime
                 self.mdate = st.st_mtime
 
@@ -473,7 +473,7 @@ class Photo(Plugin):
 
         def build_recursive_list(path, recurse=True):
             files = []
-            path = unicode(path, 'utf-8')
+            path = str(path, 'utf-8')
             try:
                 for f in os.listdir(path):
                     if f.startswith('.'):
@@ -520,7 +520,7 @@ class Photo(Plugin):
             if path in rc:
                 filelist = rc[path]
         else:
-            updated = os.path.getmtime(unicode(path, 'utf-8'))
+            updated = os.path.getmtime(str(path, 'utf-8'))
             if path in dc and dc.mtime(path) >= updated:
                 filelist = dc[path]
             for p in rc:

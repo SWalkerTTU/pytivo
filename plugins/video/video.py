@@ -3,9 +3,9 @@ import logging
 import os
 import re
 import struct
-import thread
+import _thread
 import time
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import zlib
 from UserDict import DictMixin
 from datetime import datetime, timedelta
@@ -16,7 +16,7 @@ from lrucache import LRUCache
 
 import config
 import metadata
-import transcode
+from . import transcode
 from plugin import EncodeUnicode, Plugin, quote
 
 logger = logging.getLogger('pyTivo.video.video')
@@ -65,7 +65,7 @@ class Video(Plugin):
     tvbus_cache = LRUCache(1)
 
     def video_file_filter(self, full_path, type=None):
-        if os.path.isdir(unicode(full_path, 'utf-8')):
+        if os.path.isdir(str(full_path, 'utf-8')):
             return True
         if use_extensions:
             return os.path.splitext(full_path)[1].lower() in EXTENSIONS
@@ -108,7 +108,7 @@ class Video(Plugin):
         #faking = (mime in ['video/x-tivo-mpeg-ts', 'video/x-tivo-mpeg'] and
         faking = (mime == 'video/x-tivo-mpeg' and
                   not (is_tivo_file and compatible))
-        fname = unicode(path, 'utf-8')
+        fname = str(path, 'utf-8')
         thead = ''
         if faking:
             thead = self.tivo_header(tsn, path, mime)
@@ -145,7 +145,7 @@ class Video(Plugin):
                             break
                         handler.wfile.write(block)
                         count += len(block)
-                except Exception, msg:
+                except Exception as msg:
                     logger.info(msg)
                 f.close()
             else:
@@ -160,7 +160,7 @@ class Video(Plugin):
             if not compatible:
                  handler.wfile.write('0\r\n\r\n')
             handler.wfile.flush()
-        except Exception, msg:
+        except Exception as msg:
             logger.info(msg)
 
         mega_elapsed = (time.time() - start) * 1024 * 1024
@@ -177,7 +177,7 @@ class Video(Plugin):
     def __total_items(self, full_path):
         count = 0
         try:
-            full_path = unicode(full_path, 'utf-8')
+            full_path = str(full_path, 'utf-8')
             for f in os.listdir(full_path):
                 if f.startswith('.'):
                     continue
@@ -199,7 +199,7 @@ class Video(Plugin):
         # Size is estimated by taking audio and video bit rate adding 2%
 
         if transcode.tivo_compatible(full_path, tsn, mime)[0]:
-            return os.path.getsize(unicode(full_path, 'utf-8'))
+            return os.path.getsize(str(full_path, 'utf-8'))
         else:
             # Must be re-encoded
             audioBPS = config.getMaxAudioBR(tsn) * 1000
@@ -243,7 +243,7 @@ class Video(Plugin):
                 ['TRANSCODE=%s, %s' % (['YES', 'NO'][compatible], reason)] +
                 ['SOURCE INFO: '] +
                 ["%s=%s" % (k, v)
-                 for k, v in sorted(vInfo.items(), reverse=True)] +
+                 for k, v in sorted(list(vInfo.items()), reverse=True)] +
                 ['TRANSCODE OPTIONS: '] +
                 transcode_options +
                 ['SOURCE FILE: ', os.path.basename(full_path)]
@@ -253,7 +253,7 @@ class Video(Plugin):
         if 'time' in data:
             if data['time'].lower() == 'file':
                 if not mtime:
-                    mtime = os.path.getmtime(unicode(full_path, 'utf-8'))
+                    mtime = os.path.getmtime(str(full_path, 'utf-8'))
                 try:
                     now = datetime.utcfromtimestamp(mtime)
                 except:
@@ -312,7 +312,7 @@ class Video(Plugin):
             try:
                 ltime = time.localtime(mtime)
             except:
-                logger.warning('Bad file time on ' + unicode(f.name, 'utf-8'))
+                logger.warning('Bad file time on ' + str(f.name, 'utf-8'))
                 mtime = time.time()
                 ltime = time.localtime(mtime)
             video['captureDate'] = hex(int(mtime))
@@ -457,13 +457,13 @@ class VideoDetails(DictMixin):
         del self.d[key]
 
     def keys(self):
-        return self.d.keys()
+        return list(self.d.keys())
 
     def __iter__(self):
         return self.d.__iter__()
 
     def iteritems(self):
-        return self.d.iteritems()
+        return iter(self.d.items())
 
     def default(self, key):
         defaults = {

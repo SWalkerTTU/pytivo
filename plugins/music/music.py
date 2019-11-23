@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 import unicodedata
-import urllib
+import urllib.request, urllib.parse, urllib.error
 from xml.sax.saxutils import escape
 
 import mutagen
@@ -30,9 +30,9 @@ TRANSCODE = ('.mp4', '.m4a', '.flc', '.ogg', '.wma', '.aac', '.wav',
 
 TAGNAMES = {'artist': ['\xa9ART', 'Author'],
             'title': ['\xa9nam', 'Title'],
-            'album': ['\xa9alb', u'WM/AlbumTitle'],
-            'date': ['\xa9day', u'WM/Year'],
-            'genre': ['\xa9gen', u'WM/Genre']}
+            'album': ['\xa9alb', 'WM/AlbumTitle'],
+            'date': ['\xa9day', 'WM/Year'],
+            'genre': ['\xa9gen', 'WM/Genre']}
 
 BLOCKSIZE = 64 * 1024
 
@@ -95,7 +95,7 @@ class Music(Plugin):
         duration = int(query.get('Duration', [0])[0])
         always = (handler.container.getboolean('force_ffmpeg') and
                   config.get_bin('ffmpeg'))
-        fname = unicode(path, 'utf-8')
+        fname = str(path, 'utf-8')
 
         ext = os.path.splitext(fname)[1].lower()
         needs_transcode = ext in TRANSCODE or seek or duration or always
@@ -133,7 +133,7 @@ class Music(Plugin):
                     handler.wfile.write('%x\r\n' % len(block))
                     handler.wfile.write(block)
                     handler.wfile.write('\r\n')
-                except Exception, msg:
+                except Exception as msg:
                     handler.server.logger.info(msg)
                     kill(ffmpeg)
                     break
@@ -150,7 +150,7 @@ class Music(Plugin):
 
         try:
             handler.wfile.flush()
-        except Exception, msg:
+        except Exception as msg:
             handler.server.logger.info(msg)
 
     def QueryContainer(self, handler, query):
@@ -205,7 +205,7 @@ class Music(Plugin):
             #item['ArtistName'] = artist
 
             ext = os.path.splitext(f.name)[1].lower()
-            fname = unicode(f.name, 'utf-8')
+            fname = str(f.name, 'utf-8')
 
             try:
                 # If the file is an mp3, let's load the EasyID3 interface
@@ -226,7 +226,7 @@ class Music(Plugin):
                             try:
                                 if tag in d:
                                     value = d[tag][0]
-                                    if type(value) not in [str, unicode]:
+                                    if type(value) not in [str, str]:
                                         value = str(value)
                                     return value
                             except:
@@ -242,8 +242,8 @@ class Music(Plugin):
                     item['AlbumTitle'] = get_tag('album', audioFile)
                     item['AlbumYear'] = get_tag('date', audioFile)[:4]
                     item['MusicGenre'] = get_tag('genre', audioFile)
-            except Exception, msg:
-                print msg
+            except Exception as msg:
+                print(msg)
 
             ffmpeg_path = config.get_bin('ffmpeg')
             if 'Duration' not in item and ffmpeg_path:
@@ -255,7 +255,7 @@ class Music(Plugin):
                                                stdin=subprocess.PIPE)
 
                 # wait 10 sec if ffmpeg is not back give up
-                for i in xrange(200):
+                for i in range(200):
                     time.sleep(.05)
                     if not ffmpeg.poll() == None:
                         break
@@ -293,7 +293,7 @@ class Music(Plugin):
             t = Template(FOLDER_TEMPLATE, filter=EncodeUnicode)
             t.files, t.total, t.start = self.get_files(handler, query,
                                                        AudioFileFilter)
-        t.files = map(media_data, t.files)
+        t.files = list(map(media_data, t.files))
         t.container = handler.cname
         t.name = subcname
         t.quote = quote
@@ -302,7 +302,7 @@ class Music(Plugin):
         handler.send_xml(str(t))
 
     def QueryItem(self, handler, query):
-        uq = urllib.unquote_plus
+        uq = urllib.parse.unquote_plus
         splitpath = [x for x in uq(query['Url'][0]).split('/') if x]
         path = os.path.join(handler.container['path'], *splitpath[1:])
 
@@ -321,9 +321,9 @@ class Music(Plugin):
         try:
             url = list_name.index('http://')
             list_name = list_name[url:]
-            list_file = urllib.urlopen(list_name)
+            list_file = urllib.request.urlopen(list_name)
         except:
-            list_file = open(unicode(list_name, 'utf-8'))
+            list_file = open(str(list_name, 'utf-8'))
             local_path = os.path.sep.join(list_name.split(os.path.sep)[:-1])
 
         if ext in ('.m3u', '.pls'):
@@ -334,7 +334,7 @@ class Music(Plugin):
         if ext in ('.wpl', '.asx', '.wax', '.wvx', '.b4s'):
             playlist = []
             for line in list_file:
-                line = unicode(line, charset).encode('utf-8')
+                line = str(line, charset).encode('utf-8')
                 if ext == '.wpl':
                     s = wplfile(line)
                 elif ext == '.b4s':
@@ -347,7 +347,7 @@ class Music(Plugin):
         elif ext == '.pls':
             names, titles, lengths = {}, {}, {}
             for line in list_file:
-                line = unicode(line, charset).encode('utf-8')
+                line = str(line, charset).encode('utf-8')
                 s = plsfile(line)
                 if s:
                     names[s.group(1)] = s.group(2)
@@ -372,7 +372,7 @@ class Music(Plugin):
             duration, title = 0, ''
             playlist = []
             for line in list_file:
-                line = unicode(line.strip(), charset).encode('utf-8')
+                line = str(line.strip(), charset).encode('utf-8')
                 if line:
                     if line.startswith('#EXTINF:'):
                         try:
@@ -391,7 +391,7 @@ class Music(Plugin):
         list_file.close()
 
         # Expand relative paths
-        for i in xrange(len(playlist)):
+        for i in range(len(playlist)):
             if not '://' in playlist[i].name:
                 name = playlist[i].name
                 if not os.path.isabs(name):
@@ -421,7 +421,7 @@ class Music(Plugin):
  
         def build_recursive_list(path, recurse=True):
             files = []
-            path = unicode(path, 'utf-8')
+            path = str(path, 'utf-8')
             try:
                 for f in os.listdir(path):
                     if f.startswith('.'):
@@ -466,7 +466,7 @@ class Music(Plugin):
             if path in rc:
                 filelist = rc[path]
         else:
-            updated = os.path.getmtime(unicode(path, 'utf-8'))
+            updated = os.path.getmtime(str(path, 'utf-8'))
             if path in dc and dc.mtime(path) >= updated:
                 filelist = dc[path]
             for p in rc:

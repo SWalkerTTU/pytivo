@@ -1,10 +1,10 @@
 import logging
 import os
-from urllib import quote
+from urllib.parse import quote
 
 from Cheetah.Template import Template
 
-import buildhelp
+from . import buildhelp
 import config
 from plugin import EncodeUnicode, Plugin
 
@@ -102,7 +102,7 @@ class Settings(Plugin):
         if config.config.has_section(section):
             config.config.remove_section(section)
         config.config.add_section(section)
-        for key, value in query.items():
+        for key, value in list(query.items()):
             key = key.replace('opts.', '', 1)
             if key.startswith(label + '.'):
                 _, option = key.split('.')
