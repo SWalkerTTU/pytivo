@@ -285,36 +285,34 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         )
 
     # TODO: decide if page is str or bytes
-    def send_fixed(self, page, mime: str, code: int = 200, refresh: str = "") -> None:
-        page = page.encode()
+    def send_fixed(self, page: str, mime: str, code: int = 200, refresh: str = "") -> None:
+        page_bytes = page.encode()
         squeeze = (
-            len(page) > 256
+            len(page_bytes) > 256
             and mime.startswith("text")
             and "gzip" in self.headers.get("Accept-Encoding", "")
         )
         if squeeze:
             out = BytesIO()
-            gzip.GzipFile(mode="wb", fileobj=out).write(page)
-            page = out.getvalue()
+            gzip.GzipFile(mode="wb", fileobj=out).write(page_bytes)
+            page_bytes = out.getvalue()
             out.close()
         self.send_response(code)
         self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", str(len(page)))
+        self.send_header("Content-Length", str(len(page_bytes)))
         if squeeze:
             self.send_header("Content-Encoding", "gzip")
         self.send_header("Expires", "0")
         if refresh:
             self.send_header("Refresh", refresh)
         self.end_headers()
-        self.wfile.write(page)
+        self.wfile.write(page_bytes)
         self.wfile.flush()
 
-    # TODO: decide if page is str or bytes
-    def send_xml(self, page) -> None:
+    def send_xml(self, page: str) -> None:
         self.send_fixed(page, "text/xml")
 
-    # TODO: decide if page is str or bytes
-    def send_html(self, page, code: int = 200, refresh: str = "") -> None:
+    def send_html(self, page: str, code: int = 200, refresh: str = "") -> None:
         self.send_fixed(page, "text/html; charset=utf-8", code, refresh)
 
     def root_container(self) -> None:
@@ -397,5 +395,5 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
             refresh = "%d; url=%s" % (seconds, url)
         else:
             refresh = ""
-        text = (BASE_HTML % message).encode("utf-8")
+        text = BASE_HTML % message
         self.send_html(text, refresh=refresh)
