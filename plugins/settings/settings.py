@@ -27,7 +27,7 @@ Reset</b> or <b>Restart</b> before these changes will take effect.</p>"""
 
 # Preload the templates
 tsname = os.path.join(SCRIPTDIR, 'templates', 'settings.tmpl')
-with open(tsname, 'rb') as settings_template_fh:
+with open(tsname, 'r') as settings_template_fh:
     SETTINGS_TEMPLATE = settings_template_fh.read()
 
 class Settings(Plugin):
@@ -76,7 +76,7 @@ class Settings(Plugin):
                                         dict(config.config.items(section,
                                                                  raw=True))))
 
-        t = Template(SETTINGS_TEMPLATE, filter=EncodeUnicode)
+        t = Template(SETTINGS_TEMPLATE)#, filter=EncodeUnicode)
         t.mode = buildhelp.mode
         t.options = buildhelp.options
         t.container = handler.cname

@@ -365,21 +365,22 @@ def from_text(full_path):
     for metafile in search_paths:
         if os.path.exists(metafile):
             sep = ':='[metafile.endswith('.properties')]
-            for line in file(metafile, 'U'):
-                if line.startswith(BOM):
-                    line = line[3:]
-                if line.strip().startswith('#') or not sep in line:
-                    continue
-                key, value = [x.strip() for x in line.split(sep, 1)]
-                if not key or not value:
-                    continue
-                if key.startswith('v'):
-                    if key in metadata:
-                        metadata[key].append(value)
+            with open(metafile, 'r') as metafile_fh:
+                for line in metafile_fh:
+                    if line.startswith(BOM):
+                        line = line[3:]
+                    if line.strip().startswith('#') or not sep in line:
+                        continue
+                    key, value = [x.strip() for x in line.split(sep, 1)]
+                    if not key or not value:
+                        continue
+                    if key.startswith('v'):
+                        if key in metadata:
+                            metadata[key].append(value)
+                        else:
+                            metadata[key] = [value]
                     else:
-                        metadata[key] = [value]
-                else:
-                    metadata[key] = value
+                        metadata[key] = value
 
     for rating, ratings in [('tvRating', TV_RATINGS),
                             ('mpaaRating', MPAA_RATINGS),
@@ -529,7 +530,8 @@ def _parse_nfo(nfo_path, nfo_data=None):
     # pyTivo only parses the XML metadata, but we'll try to stip the URL
     # from mixed XML/URL files.  Returns `None` when XML can't be parsed.
     if nfo_data is None:
-        nfo_data = [line.strip() for line in file(nfo_path, 'rU')]
+        with open(nfo_path, 'r') as nfo_fh:
+            nfo_data = [line.strip() for line in nfo_fh]
     xmldoc = None
     try:
         xmldoc = minidom.parseString(os.linesep.join(nfo_data))

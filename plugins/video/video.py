@@ -27,7 +27,8 @@ CLASS_NAME = 'Video'
 
 # Preload the templates
 def tmpl(name):
-    return file(os.path.join(SCRIPTDIR, 'templates', name), 'rb').read()
+    with open(os.path.join(SCRIPTDIR, 'templates', name), 'rb') as tmpl_fh:
+        return tmpl_fh.read()
 
 XML_CONTAINER_TEMPLATE = tmpl('container_xml.tmpl')
 TVBUS_TEMPLATE = tmpl('TvBus.tmpl')
@@ -366,10 +367,11 @@ class Video(Plugin):
             ext = os.path.splitext(file_path)[1].lower()
             if ext == '.tivo':
                 try:
-                    flag = file(file_path).read(8)
+                    with open(file_path, 'rb') as flag_fh:
+                        flag = flag_fh.read(8)
                 except:
                     return False
-                if ord(flag[7]) & 0x20:
+                if flag[7] & 0x20:
                     return True
             else:
                 opt = config.get_ts_flag()

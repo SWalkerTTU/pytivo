@@ -72,8 +72,10 @@ ffmpeg_size = re.compile(r'.*Video: .+, (\d+)x(\d+)[, ].*')
 # Preload the template
 tname = os.path.join(SCRIPTDIR, 'templates', 'container.tmpl')
 iname = os.path.join(SCRIPTDIR, 'templates', 'item.tmpl')
-PHOTO_TEMPLATE = file(tname, 'rb').read()
-ITEM_TEMPLATE = file(iname, 'rb').read()
+with open(tname, 'rb') as tname_fh:
+    PHOTO_TEMPLATE = tname_fh.read()
+with open(iname, 'rb') as iname_fh:
+    ITEM_TEMPLATE = iname_fh.read()
 
 JFIF_TAG = '\xff\xe0\x00\x10JFIF\x00\x01\x02\x00\x00\x01\x00\x01\x00\x00'
 
