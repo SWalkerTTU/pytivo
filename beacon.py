@@ -5,7 +5,7 @@ import struct
 import time
 import uuid
 from threading import Timer
-from urllib import quote
+from urllib.parse import quote
 
 import zeroconf
 
@@ -165,8 +165,8 @@ class Beacon:
                         if result < 0:
                             break
                         packet = packet[result:]
-                except Exception, e:
-                    print e
+                except Exception as e:
+                    print(e)
 
     def start(self):
         self.send_beacon()
@@ -196,7 +196,7 @@ class Beacon:
 
     def listen(self):
         """ For the direct-connect, TCP-style beacon """
-        import thread
+        import _thread
 
         def server():
             TCPSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -215,7 +215,7 @@ class Beacon:
 
                 client.close()
 
-        thread.start_new_thread(server, ())
+        _thread.start_new_thread(server, ())
 
     def get_name(self, address):
         """ Exchange beacons, and extract the machine name. """

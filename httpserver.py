@@ -1,5 +1,5 @@
-import BaseHTTPServer
-import SocketServer
+import http.server
+import socketserver
 import cgi
 import gzip
 import logging
@@ -8,9 +8,9 @@ import os
 import shutil
 import socket
 import time
-from cStringIO import StringIO
+from io import StringIO
 from email.utils import formatdate
-from urllib import unquote_plus, quote
+from urllib.parse import unquote_plus, quote
 from xml.sax.saxutils import escape
 
 from Cheetah.Template import Template
@@ -48,19 +48,19 @@ BASE_HTML = """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 RELOAD = '<p>The <a href="%s">page</a> will reload in %d seconds.</p>'
 UNSUP = '<h3>Unsupported Command</h3> <p>Query:</p> <ul>%s</ul>'
 
-class TivoHTTPServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
+class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     def __init__(self, server_address, RequestHandlerClass):
         self.containers = {}
         self.stop = False
         self.restart = False
         self.logger = logging.getLogger('pyTivo')
-        BaseHTTPServer.HTTPServer.__init__(self, server_address,
+        http.server.HTTPServer.__init__(self, server_address,
                                            RequestHandlerClass)
         self.daemon_threads = True
 
     def add_container(self, name, settings):
         if name in self.containers or name == 'TiVoConnect':
-            raise "Container Name in use"
+            raise Exception("Container Name in use")
         try:
             self.containers[name] = settings
         except KeyError:
@@ -81,13 +81,13 @@ class TivoHTTPServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
     def set_service_status(self, status):
         self.in_service = status
 
-class TivoHTTPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server):
         self.wbufsize = 0x10000
         self.server_version = 'pyTivo/1.0'
         self.protocol_version = 'HTTP/1.1'
         self.sys_version = ''
-        BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, request,
+        http.server.BaseHTTPRequestHandler.__init__(self, request,
             client_address, server)
 
     def address_string(self):
@@ -238,7 +238,7 @@ class TivoHTTPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def handle_file(self, query, splitpath):
         if '..' not in splitpath:    # Protect against path exploits
             ## Pass it off to a plugin?
-            for name, container in self.server.containers.items():
+            for name, container in list(self.server.containers.items()):
                 if splitpath[0] == name:
                     self.cname = name
                     self.container = container
@@ -313,7 +313,7 @@ class TivoHTTPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                           'tivo-photos'):
                     settings['content_type'] = mime
                     tsncontainers.append((section, settings))
-            except Exception, msg:
+            except Exception as msg:
                 self.server.logger.error(section + ' - ' + str(msg))
         t = Template(file=os.path.join(SCRIPTDIR, 'templates',
                                        'root_container.tmpl'),
@@ -358,7 +358,7 @@ class TivoHTTPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def unsupported(self, query):
         message = UNSUP % '\n'.join(['<li>%s: %s</li>' % (key, repr(value))
-                                     for key, value in query.items()])
+                                     for key, value in list(query.items())])
         text = BASE_HTML % message
         self.send_html(text, code=404)
 

@@ -5,17 +5,17 @@ import sys
 import threading
 import time
 import unicodedata
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 from Cheetah.Filters import Filter
 from lrucache import LRUCache
 
 if os.path.sep == '/':
-    quote = urllib.quote
-    unquote = urllib.unquote_plus
+    quote = urllib.parse.quote
+    unquote = urllib.parse.unquote_plus
 else:
-    quote = lambda x: urllib.quote(x.replace(os.path.sep, '/'))
-    unquote = lambda x: os.path.normpath(urllib.unquote_plus(x))
+    quote = lambda x: urllib.parse.quote(x.replace(os.path.sep, '/'))
+    unquote = lambda x: os.path.normpath(urllib.parse.unquote_plus(x))
 
 class Error:
     CONTENT_TYPE = 'text/html'
@@ -27,8 +27,8 @@ def GetPlugin(name):
         plugin = getattr(module, module.CLASS_NAME)()
         return plugin
     except ImportError:
-        print 'Error no', name, 'plugin exists. Check the type ' \
-        'setting for your share.'
+        print('Error no', name, 'plugin exists. Check the type ' \
+        'setting for your share.')
         return Error
 
 class EncodeUnicode(Filter):
@@ -45,7 +45,7 @@ class EncodeUnicode(Filter):
                     val = val.decode('macroman')
                 else:
                     val = val.decode('cp1252')
-        elif type(val) != unicode:
+        elif type(val) != str:
             val = str(val)
         return val.encode(encoding)
 
@@ -70,7 +70,7 @@ class Plugin(object):
         pass
 
     def send_file(self, handler, path, query):
-        handler.send_content_file(unicode(path, 'utf-8'))
+        handler.send_content_file(str(path, 'utf-8'))
 
     def get_local_base_path(self, handler, query):
         return os.path.normpath(handler.container['path'])
@@ -147,7 +147,7 @@ class Plugin(object):
             def __init__(self, name, isdir):
                 self.name = name
                 self.isdir = isdir
-                st = os.stat(unicode(name, 'utf-8'))
+                st = os.stat(str(name, 'utf-8'))
                 self.mdate = st.st_mtime
                 self.size = st.st_size
 
@@ -160,7 +160,7 @@ class Plugin(object):
 
         def build_recursive_list(path, recurse=True):
             files = []
-            path = unicode(path, 'utf-8')
+            path = str(path, 'utf-8')
             try:
                 for f in os.listdir(path):
                     if f.startswith('.'):
@@ -193,7 +193,7 @@ class Plugin(object):
             if path in rc and rc.mtime(path) + 300 >= time.time():
                 filelist = rc[path]
         else:
-            updated = os.path.getmtime(unicode(path, 'utf-8'))
+            updated = os.path.getmtime(str(path, 'utf-8'))
             if path in dc and dc.mtime(path) >= updated:
                 filelist = dc[path]
             for p in rc:

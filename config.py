@@ -1,4 +1,4 @@
-import ConfigParser
+import configparser
 import getopt
 import logging
 import logging.config
@@ -7,7 +7,8 @@ import re
 import socket
 import sys
 import uuid
-from ConfigParser import NoOptionError
+from configparser import NoOptionError
+from functools import reduce
 
 class Bdict(dict):
     def getboolean(self, x):
@@ -28,8 +29,8 @@ def init(argv):
 
     try:
         opts, _ = getopt.getopt(argv, 'c:e:', ['config=', 'extraconf='])
-    except getopt.GetoptError, msg:
-        print msg
+    except getopt.GetoptError as msg:
+        print(msg)
 
     for opt, value in opts:
         if opt in ('-c', '--config'):
@@ -47,11 +48,11 @@ def reset():
 
     bin_paths = {}
 
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     configs_found = config.read(config_files)
     if not configs_found:
-        print ('WARNING: pyTivo.conf does not exist.\n' +
-               'Assuming default values.')
+        print(('WARNING: pyTivo.conf does not exist.\n' +
+               'Assuming default values.'))
         configs_found = config_files[-1:]
 
     for section in config.sections():
@@ -71,7 +72,7 @@ def write():
     f.close()
 
 def tivos_by_ip(tivoIP):
-    for key, value in tivos.items():
+    for key, value in list(tivos.items()):
         if value['address'] == tivoIP:
             return key
 

@@ -133,7 +133,7 @@ def from_moov(full_path):
     len_desc = 0
 
     try:
-        mp4meta = mutagen.File(unicode(full_path, 'utf-8'))
+        mp4meta = mutagen.File(str(full_path, 'utf-8'))
         assert(mp4meta)
     except:
         mp4_cache[full_path] = {}
@@ -148,7 +148,7 @@ def from_moov(full_path):
         isTVShow = (mp4meta['stik'] == mutagen.mp4.MediaKind.TV_SHOW)
     else:
         isTVShow = 'tvsh' in mp4meta
-    for key, value in mp4meta.items():
+    for key, value in list(mp4meta.items()):
         if type(value) == list:
             value = value[0]
         if key in keys:
@@ -259,7 +259,7 @@ def from_mscore(rawmeta):
             try:
                 if tag in rawmeta:
                     value = rawmeta[tag][0]
-                    if type(value) not in (str, unicode):
+                    if type(value) not in (str, str):
                         value = str(value)
                     if value:
                         metadata[tagname] = value
@@ -292,7 +292,7 @@ def from_dvrms(full_path):
         return dvrms_cache[full_path]
 
     try:
-        rawmeta = mutagen.File(unicode(full_path, 'utf-8'))
+        rawmeta = mutagen.File(str(full_path, 'utf-8'))
         assert(rawmeta)
     except:
         dvrms_cache[full_path] = {}
@@ -307,7 +307,7 @@ def from_eyetv(full_path):
             'DESCRIPTION': 'description', 'YEAR': 'movieYear',
             'EPISODENUM': 'episodeNumber'}
     metadata = {}
-    path = os.path.dirname(unicode(full_path, 'utf-8'))
+    path = os.path.dirname(str(full_path, 'utf-8'))
     eyetvp = [x for x in os.listdir(path) if x.endswith('.eyetvp')][0]
     eyetvp = os.path.join(path, eyetvp)
     try:
@@ -341,7 +341,7 @@ def from_eyetv(full_path):
 
 def from_text(full_path):
     metadata = {}
-    full_path = unicode(full_path, 'utf-8')
+    full_path = str(full_path, 'utf-8')
     path, name = os.path.split(full_path)
     title, ext = os.path.splitext(name)
 
@@ -400,7 +400,7 @@ def basic(full_path, mtime=None):
     base_path, name = os.path.split(full_path)
     title, ext = os.path.splitext(name)
     if not mtime:
-        mtime = os.path.getmtime(unicode(full_path, 'utf-8'))
+        mtime = os.path.getmtime(str(full_path, 'utf-8'))
     try:
         originalAirDate = datetime.utcfromtimestamp(mtime)
     except:
@@ -533,7 +533,7 @@ def _parse_nfo(nfo_path, nfo_data=None):
     xmldoc = None
     try:
         xmldoc = minidom.parseString(os.linesep.join(nfo_data))
-    except expat.ExpatError, err:
+    except expat.ExpatError as err:
         if expat.ErrorString(err.code) == expat.errors.XML_ERROR_INVALID_TOKEN:
             # might be a URL outside the xml
             while len(nfo_data) > err.lineno:
@@ -699,7 +699,7 @@ def from_nfo(full_path):
     return metadata
 
 def _tdcat_bin(tdcat_path, full_path, tivo_mak):
-    fname = unicode(full_path, 'utf-8')
+    fname = str(full_path, 'utf-8')
     if mswindows:
         fname = fname.encode('cp1252')
     tcmd = [tdcat_path, '-m', tivo_mak, '-2', fname]
@@ -716,7 +716,7 @@ def _tdcat_py(full_path, tivo_mak):
     tfile.close()
 
     count = 0
-    for i in xrange(chunks):
+    for i in range(chunks):
         chunk_size, data_size, id, enc = struct.unpack('>LLHH',
             rawdata[count:count + 12])
         count += 12
