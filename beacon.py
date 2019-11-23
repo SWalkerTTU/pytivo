@@ -20,10 +20,10 @@ class ZCListener:
     def __init__(self, names):
         self.names = names
 
-    def removeService(self, server, type, name):
+    def remove_service(self, server, type, name):
         self.names.remove(name.replace('.' + type, ''))
 
-    def addService(self, server, type, name):
+    def add_service(self, server, type, name):
         self.names.append(name.replace('.' + type, ''))
 
 class ZCBroadcast:
@@ -74,7 +74,7 @@ class ZCBroadcast:
         self.logger.info('Scanning for TiVos...')
 
         # Get the names of servers offering TiVo videos
-        browser = zeroconf.ServiceBrowser(self.rz, VIDS, ZCListener(names))
+        browser = zeroconf.ServiceBrowser(self.rz, VIDS, listener=ZCListener(names))
 
         # Give them a second to respond
         time.sleep(1)
@@ -85,7 +85,9 @@ class ZCBroadcast:
 
         # Now get the addresses -- this is the slow part
         for name in names:
-            info = self.rz.getServiceInfo(VIDS, name + '.' + VIDS)
+            print(name)
+            info = self.rz.get_service_info(VIDS, name + '.' + VIDS)
+            print(info)
             if info:
                 tsn = info.properties.get('TSN')
                 if config.get_server('togo_all'):
@@ -127,7 +129,7 @@ class Beacon:
             try:
                 self.bd = ZCBroadcast(logger)
             except:
-                logger.error('Zeroconf failure')
+                logger.error('Zeroconf failure', exc_info=True)
                 self.bd = None
         else:
             self.bd = None
