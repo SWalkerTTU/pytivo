@@ -85,16 +85,14 @@ class ZCBroadcast:
 
         # Now get the addresses -- this is the slow part
         for name in names:
-            print(name)
             info = self.rz.get_service_info(VIDS, name + '.' + VIDS)
-            print(info)
             if info:
-                tsn = info.properties.get('TSN')
+                tsn = info.properties.get(b'TSN')
                 if config.get_server('togo_all'):
-                    tsn = info.properties.get('tsn', tsn)
+                    tsn = info.properties.get(b'tsn', tsn)
                 if tsn:
-                    address = socket.inet_ntoa(info.getAddress())
-                    port = info.getPort()
+                    address = socket.inet_ntoa(info.address)
+                    port = info.port
                     config.tivos[tsn] = {'name': name, 'address': address, 
                                          'port': port}
                     config.tivos[tsn].update(info.properties)
