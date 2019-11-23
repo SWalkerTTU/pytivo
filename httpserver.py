@@ -17,6 +17,7 @@ from typing import Dict, Any, Optional, List, Tuple
 from Cheetah.Template import Template  # type: ignore
 import config
 from plugin import GetPlugin, EncodeUnicode
+from beacon import Beacon
 
 SCRIPTDIR = os.path.dirname(__file__)
 
@@ -51,16 +52,18 @@ UNSUP = "<h3>Unsupported Command</h3> <p>Query:</p> <ul>%s</ul>"
 
 
 class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
-    def __init__(self, server_address, RequestHandlerClass):
-        self.containers = {}
-        self.beacon = None
+    def __init__(
+        self, server_address: Tuple[str, int], RequestHandlerClass: type
+    ):
+        self.containers: Dict[str, Any] = {}
+        self.beacon = Beacon()  # TODO 20191123 think about: set empty beacon to start
         self.stop = False
         self.restart = False
         self.logger = logging.getLogger("pyTivo")
         http.server.HTTPServer.__init__(self, server_address, RequestHandlerClass)
         self.daemon_threads = True
 
-    def add_container(self, name, settings):
+    def add_container(self, name: str, settings: str) -> None:
         if name in self.containers or name == "TiVoConnect":
             raise Exception("Container Name in use")
         try:
@@ -68,23 +71,25 @@ class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         except KeyError:
             self.logger.error("Unable to add container " + name)
 
-    def reset(self):
+    def reset(self) -> None:
         self.containers.clear()
         for section, settings in config.getShares():
             self.add_container(section, settings)
 
-    def handle_error(self, request, client_address):
+    def handle_error(self, request: bytes, client_address: Tuple[str, int]) -> None:
         self.logger.exception("Exception during request from %s" % (client_address,))
 
-    def set_beacon(self, beacon):
+    def set_beacon(self, beacon: Beacon) -> None:
         self.beacon = beacon
 
-    def set_service_status(self, status):
+    def set_service_status(self, status: bool) -> None:
         self.in_service = status
 
 
 class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
-    def __init__(self, request: bytes, client_address: Tuple[str, int], server: TivoHTTPServer):
+    def __init__(
+        self, request: bytes, client_address: Tuple[str, int], server: TivoHTTPServer
+    ):
         self.wbufsize = 0x10000
         self.server_version = "pyTivo/1.0"
         self.protocol_version = "HTTP/1.1"

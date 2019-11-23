@@ -85,7 +85,7 @@ def serve(httpd: httpserver.TivoHTTPServer) -> None:
         pass
 
 
-def mainloop() -> Callable:
+def mainloop() -> bool:
     httpd = setup()
     serve(httpd)
     httpd.beacon.stop()
