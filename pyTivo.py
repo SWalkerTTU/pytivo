@@ -5,7 +5,8 @@ import os
 import platform
 import sys
 import time
-from typing import Callable
+from typing import Callable, Type
+from types import TracebackType
 
 # if sys.version_info[0] != 2 or sys.version_info[1] < 5:
 #    print ('ERROR: pyTivo requires Python >= 2.5, < 3.0.\n')
@@ -23,13 +24,17 @@ import config
 import httpserver
 
 
-def exceptionLogger(*args):
+def exceptionLogger(
+    type_: Type[BaseException], value: BaseException, traceback: TracebackType
+) -> None:
     sys.excepthook = sys.__excepthook__
-    logging.getLogger("pyTivo").error("Exception in pyTivo", exc_info=args)
+    logging.getLogger("pyTivo").error(
+        "Exception in pyTivo", exc_info=(type_, value, traceback)
+    )
 
 
-def last_date():
-    lasttime = -1
+def last_date() -> str:
+    lasttime = -1.0
     path = os.path.dirname(__file__)
     if not path:
         path = "."
@@ -43,7 +48,7 @@ def last_date():
     return time.asctime(time.localtime(lasttime))
 
 
-def setup(in_service=False):
+def setup(in_service: bool = False) -> httpserver.TivoHTTPServer:
     config.init(sys.argv[1:])
     config.init_logging()
     sys.excepthook = exceptionLogger
@@ -73,7 +78,7 @@ def setup(in_service=False):
     return httpd
 
 
-def serve(httpd):
+def serve(httpd: httpserver.TivoHTTPServer) -> None:
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
