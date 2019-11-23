@@ -43,11 +43,12 @@ import time
 from heapq import heappush, heappop, heapify
 
 __version__ = "0.2"
-__all__ = ['CacheKeyError', 'LRUCache', 'DEFAULT_SIZE']
-__docformat__ = 'reStructuredText en'
+__all__ = ["CacheKeyError", "LRUCache", "DEFAULT_SIZE"]
+__docformat__ = "reStructuredText en"
 
 DEFAULT_SIZE = 16
 """Default size of a new LRUCache object, if no 'size' argument is given."""
+
 
 class CacheKeyError(KeyError):
     """Error raised when cache requests fail
@@ -55,7 +56,9 @@ class CacheKeyError(KeyError):
     When a cache record is accessed which no longer exists (or never did),
     this error is raised. To avoid it, you may want to check for the existence
     of a cache record before reading or deleting it."""
+
     pass
+
 
 class LRUCache(object):
     """Least-Recently-Used (LRU) cache.
@@ -111,9 +114,12 @@ class LRUCache(object):
             return cmp(self.atime, other.atime)
 
         def __repr__(self):
-            return "<%s %s => %s (%s)>" % \
-                   (self.__class__, self.key, self.obj, \
-                    time.asctime(time.localtime(self.atime)))
+            return "<%s %s => %s (%s)>" % (
+                self.__class__,
+                self.key,
+                self.obj,
+                time.asctime(time.localtime(self.atime)),
+            )
 
     def __init__(self, size=DEFAULT_SIZE):
         # Check arguments
@@ -181,7 +187,7 @@ class LRUCache(object):
     def __setattr__(self, name, value):
         object.__setattr__(self, name, value)
         # automagically shrink heap on resize
-        if name == 'size':
+        if name == "size":
             overage = len(self.__heap) - value
             for i in range(overage):
                 lru = heappop(self.__heap)
@@ -200,6 +206,7 @@ class LRUCache(object):
             node = self.__dict[key]
             return node.mtime
 
+
 if __name__ == "__main__":
     cache = LRUCache(25)
     print(cache)
@@ -211,7 +218,7 @@ if __name__ == "__main__":
     print(cache)
     cache.size = 10
     print(cache)
-    cache[46] = '46'
+    cache[46] = "46"
     print(cache)
     print(len(cache))
     for c in cache:
