@@ -12,7 +12,7 @@ from io import StringIO, BytesIO
 from email.utils import formatdate
 from urllib.parse import unquote_plus, quote
 from xml.sax.saxutils import escape
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 
 from Cheetah.Template import Template  # type: ignore
 import config
@@ -136,20 +136,23 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                 ## Not a file not a TiVo command
                 self.infopage()
 
-    def do_POST(self):
+    def do_POST(self) -> None:
         tsn = self.headers.get("TiVo_TCD_ID", self.headers.get("tsn", ""))
         if not self.authorize(tsn):
             return
         ctype, pdict = cgi.parse_header(self.headers.get("content-type"))
+        pdict_bytes = {key:val.encode('utf-8') for (key,val) in pdict.items()}
         if ctype == "multipart/form-data":
-            query = cgi.parse_multipart(self.rfile, pdict)
+            query = cgi.parse_multipart(self.rfile, pdict_bytes)
         else:
             length = int(self.headers.get("content-length"))
-            qs = self.rfile.read(length)
-            query = cgi.parse_qs(qs, keep_blank_values=1)
+            qs = self.rfile.read(length).decode('utf-8')
+            query = cgi.parse_qs(qs, keep_blank_values=True)
         self.handle_query(query, tsn)
 
-    def do_command(self, query, command, target, tsn):
+    def do_command(
+        self, query: Dict[str, Any], command: str, target: str, tsn: str
+    ) -> bool:
         for name, container in config.getShares(tsn):
             if target == name:
                 plugin = GetPlugin(container["type"])
@@ -163,7 +166,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                     break
         return False
 
-    def handle_query(self, query, tsn):
+    def handle_query(self, query: Dict[str, Any], tsn: str) -> None:
         mname = False
         if "Command" in query and len(query["Command"]) >= 1:
 
@@ -216,7 +219,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         # anything.
         self.unsupported(query)
 
-    def send_content_file(self, path):
+    def send_content_file(self, path: str) -> None:
         lmdate = os.path.getmtime(path)
         try:
             handle = open(path, "rb")
@@ -229,7 +232,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         if mime:
             self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", os.path.getsize(path))
+        self.send_header("Content-Length", str(os.path.getsize(path)))
         self.send_header("Last-Modified", formatdate(lmdate))
         self.end_headers()
 
@@ -241,7 +244,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         handle.close()
         self.wfile.flush()
 
-    def handle_file(self, query, splitpath):
+    def handle_file(self, query: Dict[str, Any], splitpath: List[str]) -> None:
         if ".." not in splitpath:  # Protect against path exploits
             ## Pass it off to a plugin?
             for name, container in list(self.server.containers.items()):
@@ -265,7 +268,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         ## Give up
         self.send_error(404)
 
-    def authorize(self, tsn=None) -> bool:
+    def authorize(self, tsn: Optional[str] = None) -> bool:
         # if allowed_clients is empty, we are completely open
         allowed_clients = config.getAllowedClients()
         if not allowed_clients or (tsn and config.isTsnInConfig(tsn)):
@@ -278,14 +281,17 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.send_fixed("Unauthorized.", "text/plain", 403)
         return False
 
-    def log_message(self, format, *args):
+    # TODO: typing for *args ??
+    def log_message(self, format: str, *args) -> None:
         self.server.logger.info(
             "%s [%s] %s"
             % (self.address_string(), self.log_date_time_string(), format % args)
         )
 
     # TODO: decide if page is str or bytes
-    def send_fixed(self, page: str, mime: str, code: int = 200, refresh: str = "") -> None:
+    def send_fixed(
+        self, page: str, mime: str, code: int = 200, refresh: str = ""
+    ) -> None:
         page_bytes = page.encode()
         squeeze = (
             len(page_bytes) > 256
