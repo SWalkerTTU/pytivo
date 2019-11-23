@@ -200,14 +200,14 @@ class Beacon:
             block += add
         return block
 
-    def recv_packet(self, sock):
+    def recv_packet(self, sock) -> bytes:
         length = struct.unpack("!I", self.recv_bytes(sock, 4))[0]
         return self.recv_bytes(sock, length)
 
-    def send_packet(self, sock, packet):
+    def send_packet(self, sock, packet) -> None:
         sock.sendall(struct.pack("!I", len(packet)) + packet)
 
-    def listen(self):
+    def listen(self) -> None:
         """ For the direct-connect, TCP-style beacon """
         import _thread
 
@@ -230,10 +230,10 @@ class Beacon:
 
         _thread.start_new_thread(server, ())
 
-    def get_name(self, address):
+    # TODO 20191123: this seems screwed up.
+    def get_name(self, address: str) -> str:
         """ Exchange beacons, and extract the machine name. """
         our_beacon = self.format_beacon(b"connected", False)
-        machine_name = re.compile("machine=(.*)\n").search
 
         try:
             tsock = socket.socket()
@@ -241,8 +241,11 @@ class Beacon:
             self.send_packet(tsock, our_beacon)
             tivo_beacon = self.recv_packet(tsock)
             tsock.close()
-            name = machine_name(tivo_beacon).groups()[0]
         except:
-            name = address
+            return address
 
-        return name
+        name_re = re.search(r"machine=(.*)\n", tivo_beacon.decode("utf-8"))
+        if name_re:
+            return name_re.groups()[0]
+        else:
+            return address
