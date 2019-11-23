@@ -102,8 +102,8 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         return self.server_version
 
     def do_GET(self):
-        tsn = self.headers.getheader('TiVo_TCD_ID',
-                                     self.headers.getheader('tsn', ''))
+        tsn = self.headers.get('TiVo_TCD_ID',
+                                     self.headers.get('tsn', ''))
         if not self.authorize(tsn):
             return
 
@@ -134,15 +134,15 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                 self.infopage()
 
     def do_POST(self):
-        tsn = self.headers.getheader('TiVo_TCD_ID',
-                                     self.headers.getheader('tsn', ''))
+        tsn = self.headers.get('TiVo_TCD_ID',
+                                     self.headers.get('tsn', ''))
         if not self.authorize(tsn):
             return
-        ctype, pdict = cgi.parse_header(self.headers.getheader('content-type'))
+        ctype, pdict = cgi.parse_header(self.headers.get('content-type'))
         if ctype == 'multipart/form-data':
             query = cgi.parse_multipart(self.rfile, pdict)
         else:
-            length = int(self.headers.getheader('content-length'))
+            length = int(self.headers.get('content-length'))
             qs = self.rfile.read(length)
             query = cgi.parse_qs(qs, keep_blank_values=1)
         self.handle_query(query, tsn)
@@ -278,7 +278,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
 
     def send_fixed(self, page, mime, code=200, refresh=''):
         squeeze = (len(page) > 256 and mime.startswith('text') and
-            'gzip' in self.headers.getheader('Accept-Encoding', ''))
+            'gzip' in self.headers.get('Accept-Encoding', ''))
         if squeeze:
             out = StringIO()
             gzip.GzipFile(mode='wb', fileobj=out).write(page)
@@ -303,7 +303,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.send_fixed(page, 'text/html; charset=utf-8', code, refresh)
 
     def root_container(self):
-        tsn = self.headers.getheader('TiVo_TCD_ID', '')
+        tsn = self.headers.get('TiVo_TCD_ID', '')
         tsnshares = config.getShares(tsn)
         tsncontainers = []
         for section, settings in tsnshares:
@@ -363,7 +363,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.send_html(text, code=404)
 
     def redir(self, message, seconds=2):
-        url = self.headers.getheader('Referer')
+        url = self.headers.get('Referer')
         if url:
             message += RELOAD % (url, seconds)
             refresh = '%d; url=%s' % (seconds, url)

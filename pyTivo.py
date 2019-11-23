@@ -76,7 +76,6 @@ def serve(httpd):
 
 def mainloop():
     httpd = setup()
-    print("Done with setup()")
     serve(httpd)
     httpd.beacon.stop()
     return httpd.restart 
