@@ -11,7 +11,7 @@ import urllib.parse
 from urllib.parse import quote, unquote
 from xml.dom import minidom
 
-from Cheetah.Template import Template
+from Cheetah.Template import Template  # type: ignore
 
 import config
 import metadata

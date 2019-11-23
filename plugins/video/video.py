@@ -11,7 +11,7 @@ from UserDict import DictMixin
 from datetime import datetime, timedelta
 from xml.sax.saxutils import escape
 
-from Cheetah.Template import Template
+from Cheetah.Template import Template  # type: ignore
 from lrucache import LRUCache
 
 import config

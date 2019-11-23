@@ -48,7 +48,7 @@ except ImportError:
         print("Python Imaging Library not found; using FFmpeg")
 
 import config
-from Cheetah.Template import Template
+from Cheetah.Template import Template  # type: ignore
 from lrucache import LRUCache
 from plugin import EncodeUnicode, Plugin, quote, unquote
 from plugins.video.transcode import kill

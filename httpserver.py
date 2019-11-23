@@ -13,7 +13,7 @@ from email.utils import formatdate
 from urllib.parse import unquote_plus, quote
 from xml.sax.saxutils import escape
 
-from Cheetah.Template import Template
+from Cheetah.Template import Template  # type: ignore
 import config
 from plugin import GetPlugin, EncodeUnicode
 

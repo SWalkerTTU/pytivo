@@ -5,6 +5,7 @@ import os
 import platform
 import sys
 import time
+from typing import Callable
 
 # if sys.version_info[0] != 2 or sys.version_info[1] < 5:
 #    print ('ERROR: pyTivo requires Python >= 2.5, < 3.0.\n')
@@ -79,7 +80,7 @@ def serve(httpd):
         pass
 
 
-def mainloop():
+def mainloop() -> Callable:
     httpd = setup()
     serve(httpd)
     httpd.beacon.stop()

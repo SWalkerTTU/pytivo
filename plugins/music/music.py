@@ -12,7 +12,7 @@ from xml.sax.saxutils import escape
 import mutagen
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
-from Cheetah.Template import Template
+from Cheetah.Template import Template  # type: ignore
 from lrucache import LRUCache
 import config
 from plugin import EncodeUnicode, Plugin, quote, unquote

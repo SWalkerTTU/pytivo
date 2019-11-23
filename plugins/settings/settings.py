@@ -2,7 +2,7 @@ import logging
 import os
 from urllib.parse import quote
 
-from Cheetah.Template import Template
+from Cheetah.Template import Template  # type: ignore
 
 from . import buildhelp
 import config

@@ -7,15 +7,8 @@ import time
 import unicodedata
 import urllib.request, urllib.parse, urllib.error
 
-from Cheetah.Filters import Filter
+from Cheetah.Filters import Filter  # type: ignore
 from lrucache import LRUCache
-
-if os.path.sep == "/":
-    quote = urllib.parse.quote
-    unquote = urllib.parse.unquote_plus
-else:
-    quote = lambda x: urllib.parse.quote(x.replace(os.path.sep, "/"))
-    unquote = lambda x: os.path.normpath(urllib.parse.unquote_plus(x))
 
 
 class Error:
@@ -114,6 +107,11 @@ class Plugin(object):
                 if anchor.startswith(bs):
                     anchor = anchor.replace(bs, "/", 1)
                 anchor = unquote(anchor)
+                if os.path.sep == "/":
+                    anchor = urllib.parse.unquote_plus(anchor)
+                else:
+                    anchor = os.path.normpath(urllib.parse.unquote_plus(anchor))
+
                 anchor = anchor.replace(os.path.sep + cname, local_base_path, 1)
                 if not "://" in anchor:
                     anchor = os.path.normpath(anchor)
