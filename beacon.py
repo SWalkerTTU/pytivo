@@ -137,25 +137,27 @@ class Beacon:
         self.send_beacon()
 
     def format_services(self):
-        return ';'.join(self.services)
+        return b';'.join(self.services)
 
     def format_beacon(self, conntype, services=True):
-        beacon = ['tivoconnect=1',
-                  'method=%s' % conntype,
-                  'identity={%s}' % config.getGUID(),
-                  'machine=%s' % socket.gethostname(),
-                  'platform=%s' % self.platform]
+        beacon = [
+            b'tivoconnect=1',
+            b'method=%s' % conntype,
+            b'identity={%s}' % bytes(config.getGUID(),'utf-8'),
+            b'machine=%s' % bytes(socket.gethostname(),'utf-8'),
+            b'platform=%s' % bytes(self.platform,'utf-8')
+        ]
 
         if services:
-            beacon.append('services=' + self.format_services())
+            beacon.append(b'services=' + self.format_services())
         else:
-            beacon.append('services=TiVoMediaServer:0/http')
+            beacon.append(b'services=TiVoMediaServer:0/http')
 
-        return '\n'.join(beacon) + '\n'
+        return b'\n'.join(beacon) + b'\n'
 
     def send_beacon(self):
         beacon_ips = config.getBeaconAddresses()
-        beacon = self.format_beacon('broadcast')
+        beacon = self.format_beacon(b'broadcast')
         for beacon_ip in beacon_ips.split():
             if beacon_ip != 'listen':
                 try:
@@ -211,7 +213,7 @@ class Beacon:
                 self.recv_packet(client)
 
                 # Send ours
-                self.send_packet(client, self.format_beacon('connected'))
+                self.send_packet(client, self.format_beacon(b'connected'))
 
                 client.close()
 
@@ -219,7 +221,7 @@ class Beacon:
 
     def get_name(self, address):
         """ Exchange beacons, and extract the machine name. """
-        our_beacon = self.format_beacon('connected', False)
+        our_beacon = self.format_beacon(b'connected', False)
         machine_name = re.compile('machine=(.*)\n').search
 
         try:

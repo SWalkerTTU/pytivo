@@ -57,7 +57,7 @@ def setup(in_service=False):
         httpd.add_container(section, settings)
 
     b = beacon.Beacon()
-    b.add_service('TiVoMediaServer:%s/http' % port)
+    b.add_service(b'TiVoMediaServer:%d/http' % int(port))
     b.start()
     if 'listen' in config.getBeaconAddresses():
         b.listen()
@@ -76,6 +76,7 @@ def serve(httpd):
 
 def mainloop():
     httpd = setup()
+    print("Done with setup()")
     serve(httpd)
     httpd.beacon.stop()
     return httpd.restart 
