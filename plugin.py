@@ -4,12 +4,53 @@ import shutil
 import sys
 import threading
 import time
-from typing import List, Any, Tuple
-import unicodedata
+from typing import (
+    List,
+    Any,
+    Tuple,
+    Dict,
+    TYPE_CHECKING,
+    Optional,
+    Callable,
+    Union,
+    Type,
+)
 import urllib.request, urllib.parse, urllib.error
-
+from http.server import BaseHTTPRequestHandler
 from Cheetah.Filters import Filter  # type: ignore
 from lrucache import LRUCache
+
+if TYPE_CHECKING:
+    from httpserver import TivoHTTPHandler
+
+
+def no_anchor(handler: "TivoHTTPHandler", anchor: str) -> None:
+    handler.server.logger.warning("Anchor not found: " + anchor)
+
+
+def build_recursive_list(
+    path: str,
+    recurse: bool = True,
+    filterFunction: Optional[Callable] = None,
+    file_type: Optional[List[str]] = None,
+) -> List[FileData]:
+    files = []
+    try:
+        for f in os.listdir(path):
+            if f.startswith("."):
+                continue
+            f = os.path.join(path, f)
+            isdir = os.path.isdir(f)
+            if recurse and isdir:
+                files.extend(
+                    build_recursive_list(f, recurse, filterFunction, file_type)
+                )
+            else:
+                if not filterFunction or filterFunction(f, file_type):
+                    files.append(FileData(f, isdir))
+    except:
+        pass
+    return files
 
 
 class Error:
@@ -17,36 +58,40 @@ class Error:
 
 
 class FileData:
-    def __init__(self, name, isdir):
+    def __init__(self, name: str, isdir: bool) -> None:
         self.name = name
         self.isdir = isdir
-        st = os.stat(str(name, "utf-8"))
+        st = os.stat(name)
         self.mdate = st.st_mtime
         self.size = st.st_size
 
 
 class SortList:
-    def __init__(self, files):
+    def __init__(self, files: List[FileData]) -> None:
         self.files = files
         self.unsorted = True
         self.sortby = None
         self.last_start = 0
 
 
-def GetPlugin(name: str):
+def GetPlugin(name: str) -> Union["Plugin", Error]:
     try:
         module_name = ".".join(["plugins", name, name])
         module = __import__(module_name, globals(), locals(), name)
-        plugin = getattr(module, module.CLASS_NAME)()
+        # mypy can't find CLASS_NAME for the following
+        plugin = getattr(module, module.CLASS_NAME)()  # type: ignore
         return plugin
     except ImportError:
+        # TODO 20191124: Actually log this error
         print(
             "Error no", name, "plugin exists. Check the type " "setting for your share."
         )
-        return Error
+        # TODO 20191124: Actually raise a real error instead of returning
+        #   this dumb error class
+        return Error()
 
 
-class Plugin(object):
+class Plugin:
 
     random_lock = threading.Lock()
 
@@ -64,16 +109,18 @@ class Plugin(object):
         it.init(*args, **kwds)
         return it
 
-    def init(self):
+    def init(self) -> None:
         pass
 
-    def send_file(self, handler, path, query):
-        handler.send_content_file(str(path, "utf-8"))
+    def send_file(
+        self, handler: "TivoHTTPHandler", path: str, query: Dict[str, Any]
+    ) -> None:
+        handler.send_content_file(path)
 
-    def get_local_base_path(self, handler, query):
+    def get_local_base_path(self, handler: "TivoHTTPHandler", query):
         return os.path.normpath(handler.container["path"])
 
-    def get_local_path(self, handler, query):
+    def get_local_path(self, handler: "TivoHTTPHandler", query):
 
         subcname = query["Container"][0]
 
@@ -84,14 +131,11 @@ class Plugin(object):
             path = os.path.join(path, folder)
         return path
 
-    def item_count(self, handler, query, cname, files, last_start=0):
+    def item_count(self, handler: "TivoHTTPHandler", query, cname, files, last_start=0):
         """Return only the desired portion of the list, as specified by 
            ItemCount, AnchorItem and AnchorOffset. 'files' is either a 
            list of strings, OR a list of objects with a 'name' attribute.
         """
-
-        def no_anchor(handler, anchor):
-            handler.server.logger.warning("Anchor not found: " + anchor)
 
         totalFiles = len(files)
         index = 0
@@ -106,12 +150,10 @@ class Plugin(object):
                 anchor = query["AnchorItem"][0]
                 if anchor.startswith(bs):
                     anchor = anchor.replace(bs, "/", 1)
-                anchor = unquote(anchor)
                 if os.path.sep == "/":
                     anchor = urllib.parse.unquote_plus(anchor)
                 else:
                     anchor = os.path.normpath(urllib.parse.unquote_plus(anchor))
-
                 anchor = anchor.replace(os.path.sep + cname, local_base_path, 1)
                 if not "://" in anchor:
                     anchor = os.path.normpath(anchor)
@@ -145,28 +187,13 @@ class Plugin(object):
         return files, totalFiles, index
 
     def get_files(
-        self, handler, query, filterFunction=None, force_alpha=False, allow_recurse=True
-    ) -> Tuple[List[Any], int, int]:
-        def build_recursive_list(path, recurse=True):
-            files = []
-            path = str(path, "utf-8")
-            try:
-                for f in os.listdir(path):
-                    if f.startswith("."):
-                        continue
-                    f = os.path.join(path, f)
-                    isdir = os.path.isdir(f)
-                    if sys.platform == "darwin":
-                        f = unicodedata.normalize("NFC", f)
-                    f = f.encode("utf-8")
-                    if recurse and isdir:
-                        files.extend(build_recursive_list(f))
-                    else:
-                        if not filterFunction or filterFunction(f, file_type):
-                            files.append(FileData(f, isdir))
-            except:
-                pass
-            return files
+        self,
+        handler: "TivoHTTPHandler",
+        query,
+        filterFunction=None,
+        force_alpha: bool = False,
+        allow_recurse: bool = True,
+    ) -> Tuple[List[FileData], int, int]:
 
         subcname = query["Container"][0]
         path = self.get_local_path(handler, query)
@@ -192,33 +219,26 @@ class Plugin(object):
                     del rc[p]
 
         if not filelist:
-            filelist = SortList(build_recursive_list(path, recurse))
+            filelist = SortList(
+                build_recursive_list(path, recurse, filterFunction, file_type)
+            )
 
             if recurse:
                 rc[path] = filelist
             else:
                 dc[path] = filelist
 
-        def dir_sort(x, y):
-            if x.isdir == y.isdir:
-                return name_sort(x, y)
-            else:
-                return y.isdir - x.isdir
-
-        def name_sort(x, y):
-            return cmp(x.name, y.name)
-
-        def date_sort(x, y):
-            return cmp(y.mdate, x.mdate)
-
         sortby = query.get("SortOrder", ["Normal"])[0]
         if filelist.unsorted or filelist.sortby != sortby:
             if force_alpha:
-                filelist.files.sort(dir_sort)
+                # secondary by ascending name
+                filelist.files.sort(key=lambda x: x.name)
+                # primary by descending isdir
+                filelist.files.sort(key=lambda x: x.isdir, reverse=True)
             elif sortby == "!CaptureDate":
-                filelist.files.sort(date_sort)
+                filelist.files.sort(key=lambda x: x.mdate)
             else:
-                filelist.files.sort(name_sort)
+                filelist.files.sort(key=lambda x: x.name)
 
             filelist.sortby = sortby
             filelist.unsorted = False

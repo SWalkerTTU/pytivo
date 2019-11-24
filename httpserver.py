@@ -258,7 +258,11 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                     base = os.path.normpath(container["path"])
                     path = os.path.join(base, *splitpath[1:])
                     plugin = GetPlugin(container["type"])
-                    plugin.send_file(self, path, query)
+                    # plugin could be Error, with no send_file method
+                    try:
+                        plugin.send_file(self, path, query)  # type: ignore
+                    except AttributeError:
+                        pass
                     return
 
             ## Serve it from a "content" directory?
@@ -337,9 +341,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                     tsncontainers.append((section, settings))
             except Exception as msg:
                 self.server.logger.error(section + " - " + str(msg), exc_info=True)
-        t = Template(
-            file=os.path.join(SCRIPTDIR, "templates", "root_container.tmpl"),
-        )
+        t = Template(file=os.path.join(SCRIPTDIR, "templates", "root_container.tmpl"))
         if self.server.beacon.bd:
             t.renamed = self.server.beacon.bd.renamed
         else:
@@ -351,9 +353,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.send_xml(str(t))
 
     def infopage(self) -> None:
-        t = Template(
-            file=os.path.join(SCRIPTDIR, "templates", "info_page.tmpl"),
-        )
+        t = Template(file=os.path.join(SCRIPTDIR, "templates", "info_page.tmpl"))
         t.admin = ""
 
         if config.get_server("tivo_mak", "") and config.get_server("togo_path", ""):
