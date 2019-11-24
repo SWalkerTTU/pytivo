@@ -116,23 +116,23 @@ KB = 1024
 mswindows = sys.platform == "win32"
 
 
-def get_mpaa(rating):
+def get_mpaa(rating: int) -> str:
     return HUMAN["mpaaRating"].get(rating, "NR")
 
 
-def get_tv(rating):
+def get_tv(rating: int) -> str:
     return HUMAN["tvRating"].get(rating, "NR")
 
 
-def get_stars(rating):
+def get_stars(rating: int) -> str:
     return HUMAN["starRating"].get(rating, "")
 
 
-def get_color(value):
+def get_color(value: int) -> str:
     return HUMAN["colorCode"].get(value, "COLOR")
 
 
-def human_size(raw):
+def human_size(raw: Any) -> str:
     raw = float(raw)
     if raw > GB:
         tsize = "%.2f GB" % (raw / GB)
@@ -145,6 +145,7 @@ def human_size(raw):
     return tsize
 
 
+# TODO: type of element?
 def tag_data(element, tag: str) -> str:
     for name in tag.split("/"):
         found = False
@@ -160,6 +161,7 @@ def tag_data(element, tag: str) -> str:
     return element.firstChild.data
 
 
+# TODO: type of element?
 def _vtag_data(element, tag: str) -> List[str]:
     for name in tag.split("/"):
         new_element = element.getElementsByTagName(name)
@@ -170,6 +172,7 @@ def _vtag_data(element, tag: str) -> List[str]:
     return [x.firstChild.data for x in elements if x.firstChild]
 
 
+# TODO: type of element?
 def _vtag_data_alternate(element, tag: str) -> List[str]:
     elements = [element]
     for name in tag.split("/"):
