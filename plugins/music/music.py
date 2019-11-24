@@ -1,3 +1,4 @@
+from functools import partial
 import os
 import random
 import re
@@ -5,18 +6,23 @@ import shutil
 import subprocess
 import sys
 import time
+from typing import TYPE_CHECKING, Dict, Any, List, Optional, Union
 import unicodedata
 import urllib.request, urllib.parse, urllib.error
 from xml.sax.saxutils import escape
 
-import mutagen
-from mutagen.easyid3 import EasyID3
-from mutagen.mp3 import MP3
+import mutagen  # type: ignore
+from mutagen.easyid3 import EasyID3  # type: ignore
+from mutagen.mp3 import MP3  # type: ignore
 from Cheetah.Template import Template  # type: ignore
+
 from lrucache import LRUCache
 import config
-from plugin import Plugin, quote, unquote, SortList
+from plugin import Plugin, quote, unquote, SortList, FileData
 from plugins.video.transcode import kill
+
+if TYPE_CHECKING:
+    from httpserver import TivoHTTPHandler
 
 SCRIPTDIR = os.path.dirname(__file__)
 
@@ -70,28 +76,28 @@ with open(tpname, "rb") as tpname_fh:
 with open(iname, "rb") as iname_fh:
     ITEM_TEMPLATE = iname_fh.read()
 
-# XXX BIG HACK
-# subprocess is broken for me on windows so super hack
-def patchSubprocess():
-    o = subprocess.Popen._make_inheritable
+# TODO: No more subprocess.Popen._make_inheritable, need to verify on Windows
+## XXX BIG HACK
+## subprocess is broken for me on windows so super hack
+# def patchSubprocess() -> None:
+#    o = subprocess.Popen._make_inheritable
+#
+#    def _make_inheritable(self, handle):
+#        if not handle:
+#            return subprocess.GetCurrentProcess()
+#        return o(self, handle)
+#
+#    subprocess.Popen._make_inheritable = _make_inheritable
+#
+#
+# mswindows = sys.platform == "win32"
+# if mswindows:
+#    patchSubprocess()
 
-    def _make_inheritable(self, handle):
-        if not handle:
-            return subprocess.GetCurrentProcess()
-        return o(self, handle)
 
-    subprocess.Popen._make_inheritable = _make_inheritable
-
-
-mswindows = sys.platform == "win32"
-if mswindows:
-    patchSubprocess()
-
-
-class FileData:
-    def __init__(self, name, isdir):
-        self.name = name
-        self.isdir = isdir
+class FileDataMusic(FileData):
+    def __init__(self, name: str, isdir: bool) -> None:
+        super().__init__(name, isdir)
         self.isplay = os.path.splitext(name)[1].lower() in PLAYLISTS
         self.title = ""
         self.duration = 0
@@ -109,32 +115,34 @@ class Music(Plugin):
     recurse_cache = LRUCache(5)
     dir_cache = LRUCache(10)
 
-    def send_file(self, handler, path, query):
+    def send_file(
+        self, handler: "TivoHTTPHandler", path: str, query: Dict[str, Any]
+    ) -> None:
         seek = int(query.get("Seek", [0])[0])
         duration = int(query.get("Duration", [0])[0])
         always = handler.container.getboolean("force_ffmpeg") and config.get_bin(
             "ffmpeg"
         )
-        fname = str(path, "utf-8")
 
-        ext = os.path.splitext(fname)[1].lower()
+        ext = os.path.splitext(path)[1].lower()
         needs_transcode = ext in TRANSCODE or seek or duration or always
 
         if not needs_transcode:
-            fsize = os.path.getsize(fname)
+            fsize = os.path.getsize(path)
             handler.send_response(200)
-            handler.send_header("Content-Length", fsize)
+            handler.send_header("Content-Length", str(fsize))
         else:
+            if config.get_bin("ffmpeg") is None:
+                handler.server.logger.error("ffmpeg is not found.  Aborting transcode.")
+                return
             handler.send_response(206)
             handler.send_header("Transfer-Encoding", "chunked")
         handler.send_header("Content-Type", "audio/mpeg")
         handler.end_headers()
 
         if needs_transcode:
-            if mswindows:
-                fname = fname.encode("cp1252")
-
-            cmd = [config.get_bin("ffmpeg"), "-i", fname, "-vn"]
+            cmd: List[str]
+            cmd = [config.get_bin("ffmpeg"), "-i", path, "-vn"]  # type: ignore
             if ext in [".mp3", ".mp2"]:
                 cmd += ["-acodec", "copy"]
             else:
@@ -149,9 +157,9 @@ class Music(Plugin):
             while True:
                 try:
                     block = ffmpeg.stdout.read(BLOCKSIZE)
-                    handler.wfile.write("%x\r\n" % len(block))
+                    handler.wfile.write(b"%x\r\n" % len(block))
                     handler.wfile.write(block)
-                    handler.wfile.write("\r\n")
+                    handler.wfile.write(b"\r\n")
                 except Exception as msg:
                     handler.server.logger.info(msg)
                     kill(ffmpeg)
@@ -160,7 +168,7 @@ class Music(Plugin):
                 if not block:
                     break
         else:
-            f = open(fname, "rb")
+            f = open(path, "rb")
             try:
                 shutil.copyfileobj(f, handler.wfile)
             except:
@@ -172,135 +180,133 @@ class Music(Plugin):
         except Exception as msg:
             handler.server.logger.info(msg)
 
-    def QueryContainer(self, handler, query):
-        def AudioFileFilter(f, filter_type=None):
-            ext = os.path.splitext(f)[1].lower()
+    def AudioFileFilter(
+        self, f: str, filter_type: Optional[str] = None
+    ) -> Union[bool, str]:
+        ext = os.path.splitext(f)[1].lower()
 
-            if ext in (".mp3", ".mp2") or (
-                ext in TRANSCODE and config.get_bin("ffmpeg")
-            ):
-                return self.AUDIO
-            else:
-                file_type = False
+        file_type: Union[bool, str]
 
-                if not filter_type or filter_type.split("/")[0] != self.AUDIO:
-                    if ext in PLAYLISTS:
-                        file_type = self.PLAYLIST
-                    elif os.path.isdir(f):
-                        file_type = self.DIRECTORY
+        if ext in (".mp3", ".mp2") or (ext in TRANSCODE and config.get_bin("ffmpeg")):
+            return self.AUDIO
+        else:
+            file_type = False
 
-                return file_type
+            if filter_type is None or filter_type.split("/")[0] != self.AUDIO:
+                if ext in PLAYLISTS:
+                    file_type = self.PLAYLIST
+                elif os.path.isdir(f):
+                    file_type = self.DIRECTORY
 
-        def media_data(f):
-            if f.name in self.media_data_cache:
-                return self.media_data_cache[f.name]
+            return file_type
 
-            item = {}
-            item["path"] = f.name
-            item["part_path"] = f.name.replace(local_base_path, "", 1)
-            item["name"] = os.path.basename(f.name)
-            item["is_dir"] = f.isdir
-            item["is_playlist"] = f.isplay
-            item["params"] = "No"
+    def media_data(self, f: FileDataMusic, local_base_path: str) -> Dict[str, Any]:
+        if f.name in self.media_data_cache:
+            return self.media_data_cache[f.name]
 
-            if f.title:
-                item["Title"] = f.title
+        item: Dict[str, Any] = {}
+        item["path"] = f.name
+        item["part_path"] = f.name.replace(local_base_path, "", 1)
+        item["name"] = os.path.basename(f.name)
+        item["is_dir"] = f.isdir
+        item["is_playlist"] = f.isplay
+        item["params"] = "No"
 
-            if f.duration > 0:
-                item["Duration"] = f.duration
+        if f.title:
+            item["Title"] = f.title
 
-            if f.isdir or f.isplay or "://" in f.name:
-                self.media_data_cache[f.name] = item
-                return item
+        if f.duration > 0:
+            item["Duration"] = f.duration
 
-            # If the format is: (track #) Song name...
-            # artist, album, track = f.name.split(os.path.sep)[-3:]
-            # track = os.path.splitext(track)[0]
-            # if track[0].isdigit:
-            #    track = ' '.join(track.split(' ')[1:])
-
-            # item['SongTitle'] = track
-            # item['AlbumTitle'] = album
-            # item['ArtistName'] = artist
-
-            ext = os.path.splitext(f.name)[1].lower()
-            fname = str(f.name, "utf-8")
-
-            try:
-                # If the file is an mp3, let's load the EasyID3 interface
-                if ext == ".mp3":
-                    audioFile = MP3(fname, ID3=EasyID3)
-                else:
-                    # Otherwise, let mutagen figure it out
-                    audioFile = mutagen.File(fname)
-
-                if audioFile:
-                    # Pull the length from the FileType, if present
-                    if audioFile.info.length > 0:
-                        item["Duration"] = int(audioFile.info.length * 1000)
-
-                    # Grab our other tags, if present
-                    def get_tag(tagname, d):
-                        for tag in [tagname] + TAGNAMES[tagname]:
-                            try:
-                                if tag in d:
-                                    value = d[tag][0]
-                                    if type(value) not in [str, str]:
-                                        value = str(value)
-                                    return value
-                            except:
-                                pass
-                        return ""
-
-                    artist = get_tag("artist", audioFile)
-                    title = get_tag("title", audioFile)
-                    if artist == "Various Artists" and "/" in title:
-                        artist, title = [x.strip() for x in title.split("/")]
-                    item["ArtistName"] = artist
-                    item["SongTitle"] = title
-                    item["AlbumTitle"] = get_tag("album", audioFile)
-                    item["AlbumYear"] = get_tag("date", audioFile)[:4]
-                    item["MusicGenre"] = get_tag("genre", audioFile)
-            except Exception as msg:
-                print(msg)
-
-            ffmpeg_path = config.get_bin("ffmpeg")
-            if "Duration" not in item and ffmpeg_path:
-                if mswindows:
-                    fname = fname.encode("cp1252")
-                cmd = [ffmpeg_path, "-i", fname]
-                ffmpeg = subprocess.Popen(
-                    cmd,
-                    stderr=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stdin=subprocess.PIPE,
-                )
-
-                # wait 10 sec if ffmpeg is not back give up
-                for i in range(200):
-                    time.sleep(0.05)
-                    if not ffmpeg.poll() == None:
-                        break
-
-                if ffmpeg.poll() != None:
-                    output = ffmpeg.stderr.read()
-                    d = durre(output)
-                    if d:
-                        millisecs = (
-                            int(d.group(1)) * 3600
-                            + int(d.group(2)) * 60
-                            + int(d.group(3))
-                        ) * 1000 + int(d.group(4)) * (10 ** (3 - len(d.group(4))))
-                    else:
-                        millisecs = 0
-                    item["Duration"] = millisecs
-
-            if "Duration" in item and ffmpeg_path:
-                item["params"] = "Yes"
-
+        if f.isdir or f.isplay or "://" in f.name:
             self.media_data_cache[f.name] = item
             return item
 
+        # If the format is: (track #) Song name...
+        # artist, album, track = f.name.split(os.path.sep)[-3:]
+        # track = os.path.splitext(track)[0]
+        # if track[0].isdigit:
+        #    track = ' '.join(track.split(' ')[1:])
+
+        # item['SongTitle'] = track
+        # item['AlbumTitle'] = album
+        # item['ArtistName'] = artist
+
+        ext = os.path.splitext(f.name)[1].lower()
+
+        try:
+            # If the file is an mp3, let's load the EasyID3 interface
+            if ext == ".mp3":
+                audioFile = MP3(f.name, ID3=EasyID3)
+            else:
+                # Otherwise, let mutagen figure it out
+                audioFile = mutagen.File(f.name)
+
+            if audioFile:
+                # Pull the length from the FileType, if present
+                if audioFile.info.length > 0:
+                    item["Duration"] = int(audioFile.info.length * 1000)
+
+                # Grab our other tags, if present
+                def get_tag(tagname, d):
+                    for tag in [tagname] + TAGNAMES[tagname]:
+                        try:
+                            if tag in d:
+                                value = d[tag][0]
+                                if type(value) not in [str, str]:
+                                    value = str(value)
+                                return value
+                        except:
+                            pass
+                    return ""
+
+                artist = get_tag("artist", audioFile)
+                title = get_tag("title", audioFile)
+                if artist == "Various Artists" and "/" in title:
+                    artist, title = [x.strip() for x in title.split("/")]
+                item["ArtistName"] = artist
+                item["SongTitle"] = title
+                item["AlbumTitle"] = get_tag("album", audioFile)
+                item["AlbumYear"] = get_tag("date", audioFile)[:4]
+                item["MusicGenre"] = get_tag("genre", audioFile)
+        except Exception as msg:
+            print(msg)
+
+        ffmpeg_path = config.get_bin("ffmpeg")
+        if "Duration" not in item and ffmpeg_path:
+            cmd = [ffmpeg_path, "-i", f.name]
+            ffmpeg = subprocess.Popen(
+                cmd,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stdin=subprocess.PIPE,
+            )
+
+            # wait 10 sec if ffmpeg is not back give up
+            for i in range(200):
+                time.sleep(0.05)
+                if not ffmpeg.poll() == None:
+                    break
+
+            if ffmpeg.poll() != None:
+                output = ffmpeg.stderr.read()
+                d = durre(output)
+                if d:
+                    millisecs = (
+                        int(d.group(1)) * 3600 + int(d.group(2)) * 60 + int(d.group(3))
+                    ) * 1000 + int(d.group(4)) * (10 ** (3 - len(d.group(4))))
+                else:
+                    millisecs = 0
+                item["Duration"] = millisecs
+
+        if "Duration" in item and ffmpeg_path:
+            item["params"] = "Yes"
+
+        self.media_data_cache[f.name] = item
+        return item
+
+    # this is a TivoConnect Command, so must be named this exactly
+    def QueryContainer(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
         subcname = query["Container"][0]
         local_base_path = self.get_local_base_path(handler, query)
 
@@ -313,8 +319,12 @@ class Music(Plugin):
             t.files, t.total, t.start = self.get_playlist(handler, query)
         else:
             t = Template(FOLDER_TEMPLATE)
-            t.files, t.total, t.start = self.get_files(handler, query, AudioFileFilter)
-        t.files = list(map(media_data, t.files))
+            t.files, t.total, t.start = self.get_files(
+                handler, query, self.AudioFileFilter
+            )
+        t.files = list(
+            map(partial(self.media_data, local_base_path=local_base_path), t.files)
+        )
         t.container = handler.cname
         t.name = subcname
         t.quote = quote
@@ -322,6 +332,7 @@ class Music(Plugin):
 
         handler.send_xml(str(t))
 
+    # this is a TivoConnect Command, so must be named this exactly
     def QueryItem(self, handler, query):
         uq = urllib.parse.unquote_plus
         splitpath = [x for x in uq(query["Url"][0]).split("/") if x]
@@ -363,7 +374,7 @@ class Music(Plugin):
                 else:
                     s = asxfile(line)
                 if s:
-                    playlist.append(FileData(s.group(1), False))
+                    playlist.append(FileDataMusic(s.group(1), False))
 
         elif ext == ".pls":
             names, titles, lengths = {}, {}, {}
@@ -382,7 +393,7 @@ class Music(Plugin):
                             lengths[s.group(1)] = int(s.group(2))
             playlist = []
             for key in names:
-                f = FileData(names[key], False)
+                f = FileDataMusic(names[key], False)
                 if key in titles:
                     f.title = titles[key]
                 if key in lengths:
@@ -403,7 +414,7 @@ class Music(Plugin):
                             duration = 0
 
                     elif not line.startswith("#"):
-                        f = FileData(line, False)
+                        f = FileDataMusic(line, False)
                         f.title = title.strip()
                         f.duration = duration
                         playlist.append(f)
@@ -447,7 +458,7 @@ class Music(Plugin):
                     if recurse and isdir:
                         files.extend(build_recursive_list(f))
                     else:
-                        fd = FileData(f, isdir)
+                        fd = FileDataMusic(f, isdir)
                         if isdir or filterFunction(f, file_type):
                             files.append(fd)
             except:

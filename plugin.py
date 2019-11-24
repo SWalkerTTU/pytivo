@@ -53,12 +53,18 @@ def build_recursive_list(
     return files
 
 
-if os.path.sep == "/":
-    quote = urllib.quote
-    unquote = urllib.unquote_plus
-else:
-    quote = lambda x: urllib.quote(x.replace(os.path.sep, "/"))
-    unquote = lambda x: os.path.normpath(urllib.unquote_plus(x))
+def quote(in_str: str) -> str:
+    if os.path.sep == "/":
+        return urllib.parse.quote(in_str)
+    else:
+        return urllib.parse.quote(in_str.replace(os.path.sep, "/"))
+
+
+def unquote(in_str: str) -> str:
+    if os.path.sep == "/":
+        return urllib.parse.unquote_plus(in_str)
+    else:
+        return os.path.normpath(urllib.parse.unquote_plus(in_str))
 
 
 class Error:
