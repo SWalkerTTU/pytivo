@@ -6,7 +6,7 @@ from Cheetah.Template import Template  # type: ignore
 
 from . import buildhelp
 import config
-from plugin import EncodeUnicode, Plugin
+from plugin import Plugin
 
 SCRIPTDIR = os.path.dirname(__file__)
 
@@ -77,7 +77,7 @@ class Settings(Plugin):
                         (section, dict(config.config.items(section, raw=True)))
                     )
 
-        t = Template(SETTINGS_TEMPLATE)  # , filter=EncodeUnicode)
+        t = Template(SETTINGS_TEMPLATE)
         t.mode = buildhelp.mode
         t.options = buildhelp.options
         t.container = handler.cname

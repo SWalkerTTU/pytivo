@@ -50,7 +50,7 @@ except ImportError:
 import config
 from Cheetah.Template import Template  # type: ignore
 from lrucache import LRUCache
-from plugin import EncodeUnicode, Plugin, quote, unquote
+from plugin import Plugin, quote, unquote
 from plugins.video.transcode import kill
 
 SCRIPTDIR = os.path.dirname(__file__)
@@ -442,7 +442,7 @@ class Photo(Plugin):
             self.media_data_cache[f.name] = item
             return item
 
-        t = Template(PHOTO_TEMPLATE, filter=EncodeUnicode)
+        t = Template(PHOTO_TEMPLATE)
         t.name = query["Container"][0]
         t.container = handler.cname
         t.files, t.total, t.start = self.get_files(handler, query, ImageFileFilter)
@@ -458,7 +458,7 @@ class Photo(Plugin):
         path = os.path.join(handler.container["path"], *splitpath[1:])
 
         if path in self.media_data_cache:
-            t = Template(ITEM_TEMPLATE, filter=EncodeUnicode)
+            t = Template(ITEM_TEMPLATE)
             t.file = self.media_data_cache[path]
             t.escape = escape
             handler.send_xml(str(t))

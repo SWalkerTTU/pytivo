@@ -15,7 +15,7 @@ from Cheetah.Template import Template  # type: ignore
 
 import config
 import metadata
-from plugin import EncodeUnicode, Plugin
+from plugin import Plugin
 
 logger = logging.getLogger("pyTivo.togo")
 tag_data = metadata.tag_data
@@ -262,7 +262,7 @@ class ToGo(Plugin):
             ItemCount = 0
             title = ""
 
-        t = Template(NPL_TEMPLATE, filter=EncodeUnicode)
+        t = Template(NPL_TEMPLATE)
         t.quote = quote
         t.folder = folder
         t.status = status

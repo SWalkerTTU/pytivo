@@ -16,7 +16,7 @@ class Error:
     CONTENT_TYPE = "text/html"
 
 
-def GetPlugin(name):
+def GetPlugin(name: str):
     try:
         module_name = ".".join(["plugins", name, name])
         module = __import__(module_name, globals(), locals(), name)
