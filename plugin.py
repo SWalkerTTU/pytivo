@@ -53,6 +53,14 @@ def build_recursive_list(
     return files
 
 
+if os.path.sep == "/":
+    quote = urllib.quote
+    unquote = urllib.unquote_plus
+else:
+    quote = lambda x: urllib.quote(x.replace(os.path.sep, "/"))
+    unquote = lambda x: os.path.normpath(urllib.unquote_plus(x))
+
+
 class Error:
     CONTENT_TYPE = "text/html"
 
@@ -162,10 +170,7 @@ class Plugin:
                 anchor = query["AnchorItem"][0]
                 if anchor.startswith(bs):
                     anchor = anchor.replace(bs, "/", 1)
-                if os.path.sep == "/":
-                    anchor = urllib.parse.unquote_plus(anchor)
-                else:
-                    anchor = os.path.normpath(urllib.parse.unquote_plus(anchor))
+                anchor = unquote(anchor)
                 anchor = anchor.replace(os.path.sep + cname, local_base_path, 1)
                 if not "://" in anchor:
                     anchor = os.path.normpath(anchor)
