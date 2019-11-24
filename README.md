@@ -1,4 +1,4 @@
-This fork is the port of pyTivo to python 3!
+This fork is the python 3 port of pyTivo!
 
 # Description
 
