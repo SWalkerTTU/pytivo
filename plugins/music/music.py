@@ -15,7 +15,7 @@ from mutagen.mp3 import MP3
 from Cheetah.Template import Template  # type: ignore
 from lrucache import LRUCache
 import config
-from plugin import Plugin, quote, unquote
+from plugin import Plugin, quote, unquote, SortList
 from plugins.video.transcode import kill
 
 SCRIPTDIR = os.path.dirname(__file__)
@@ -432,13 +432,6 @@ class Music(Plugin):
         return playlist
 
     def get_files(self, handler, query, filterFunction=None):
-        class SortList:
-            def __init__(self, files):
-                self.files = files
-                self.unsorted = True
-                self.sortby = None
-                self.last_start = 0
-
         def build_recursive_list(path, recurse=True):
             files = []
             path = str(path, "utf-8")

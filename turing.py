@@ -311,7 +311,7 @@ class Turing:
         """ Push a word through the keyed S-boxes """
         n = (w >> 24, (w >> 16) & 0xFF, (w >> 8) & 0xFF, w & 0xFF)
         if b:
-            n = n[b:] + n[:b]
+            n = n[b:] + n[:b]  # type: ignore
         s = self.sbox
         return s[0][n[0]] ^ s[1][n[1]] ^ s[2][n[2]] ^ s[3][n[3]]
 
