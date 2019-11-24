@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from functools import lru_cache
 import hashlib
 import logging
 import os
@@ -16,7 +17,6 @@ except:
     pass
 
 import mutagen
-from lrucache import LRUCache
 
 import config
 import plugins.video.transcode
@@ -112,11 +112,6 @@ GB = 1024 ** 3
 MB = 1024 ** 2
 KB = 1024
 
-tivo_cache = LRUCache(50)
-mp4_cache = LRUCache(50)
-dvrms_cache = LRUCache(50)
-nfo_cache = LRUCache(50)
-
 mswindows = sys.platform == "win32"
 
 
@@ -191,10 +186,8 @@ def _tag_value(element, tag):
         return int(value[0])
 
 
+@lru_cache
 def from_moov(full_path):
-    if full_path in mp4_cache:
-        return mp4_cache[full_path]
-
     metadata = {}
     len_desc = 0
 
@@ -202,7 +195,6 @@ def from_moov(full_path):
         mp4meta = mutagen.File(str(full_path, "utf-8"))
         assert mp4meta
     except:
-        mp4_cache[full_path] = {}
         return {}
 
     # The following 1-to-1 correspondence of atoms to pyTivo
@@ -308,7 +300,6 @@ def from_moov(full_path):
                 for item in data:
                     metadata[item] = data[item]
 
-    mp4_cache[full_path] = metadata
     return metadata
 
 
@@ -360,19 +351,15 @@ def from_mscore(rawmeta):
     return metadata
 
 
+@lru_cache
 def from_dvrms(full_path):
-    if full_path in dvrms_cache:
-        return dvrms_cache[full_path]
-
     try:
         rawmeta = mutagen.File(str(full_path, "utf-8"))
         assert rawmeta
     except:
-        dvrms_cache[full_path] = {}
         return {}
 
     metadata = from_mscore(rawmeta)
-    dvrms_cache[full_path] = metadata
     return metadata
 
 
@@ -659,10 +646,8 @@ def _parse_nfo(nfo_path, nfo_data=None):
     return xmldoc
 
 
+@lru_cache
 def _from_tvshow_nfo(tvshow_nfo_path):
-    if tvshow_nfo_path in nfo_cache:
-        return nfo_cache[tvshow_nfo_path]
-
     items = {
         "description": "plot",
         "title": "title",
@@ -671,7 +656,7 @@ def _from_tvshow_nfo(tvshow_nfo_path):
         "tvRating": "mpaa",
     }
 
-    nfo_cache[tvshow_nfo_path] = metadata = {}
+    metadata = {}
 
     xmldoc = _parse_nfo(tvshow_nfo_path)
     if not xmldoc:
@@ -690,7 +675,6 @@ def _from_tvshow_nfo(tvshow_nfo_path):
 
     metadata = _nfo_vitems(tvshow, metadata)
 
-    nfo_cache[tvshow_nfo_path] = metadata
     return metadata
 
 
@@ -780,11 +764,9 @@ def _from_movie_nfo(xmldoc):
     return metadata
 
 
+@lru_cache
 def from_nfo(full_path):
-    if full_path in nfo_cache:
-        return nfo_cache[full_path]
-
-    metadata = nfo_cache[full_path] = {}
+    metadata = {}
 
     nfo_path = "%s.nfo" % os.path.splitext(full_path)[0]
     if not os.path.exists(nfo_path):
@@ -815,7 +797,6 @@ def from_nfo(full_path):
             else:
                 del metadata[key]
 
-    nfo_cache[full_path] = metadata
     return metadata
 
 
@@ -863,10 +844,8 @@ def _tdcat_py(full_path, tivo_mak):
     return details
 
 
+@lru_cache
 def from_tivo(full_path):
-    if full_path in tivo_cache:
-        return tivo_cache[full_path]
-
     tdcat_path = config.get_bin("tdcat")
     tivo_mak = config.get_server("tivo_mak")
     try:
@@ -876,7 +855,6 @@ def from_tivo(full_path):
         else:
             details = _tdcat_py(full_path, tivo_mak)
         metadata = from_details(details)
-        tivo_cache[full_path] = metadata
     except:
         metadata = {}
 

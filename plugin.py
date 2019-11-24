@@ -53,6 +53,7 @@ class Plugin(object):
 
     CONTENT_TYPE = ""
 
+    # TODO: use @functools.lru_cache instead
     recurse_cache = LRUCache(5)
     dir_cache = LRUCache(10)
 
@@ -191,7 +192,9 @@ class Plugin(object):
         recurse = allow_recurse and query.get("Recurse", ["No"])[0] == "Yes"
 
         filelist = []
+        # TODO: use @functools.lru_cache instead
         rc = self.recurse_cache
+        # TODO: use @functools.lru_cache instead
         dc = self.dir_cache
         if recurse:
             if path in rc and rc.mtime(path) + 300 >= time.time():
