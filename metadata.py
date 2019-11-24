@@ -186,7 +186,7 @@ def _tag_value(element, tag):
         return int(value[0])
 
 
-@lru_cache
+@lru_cache(maxsize=64)
 def from_moov(full_path):
     metadata = {}
     len_desc = 0
@@ -351,7 +351,7 @@ def from_mscore(rawmeta):
     return metadata
 
 
-@lru_cache
+@lru_cache(maxsize=64)
 def from_dvrms(full_path):
     try:
         rawmeta = mutagen.File(str(full_path, "utf-8"))
@@ -646,7 +646,7 @@ def _parse_nfo(nfo_path, nfo_data=None):
     return xmldoc
 
 
-@lru_cache
+@lru_cache(maxsize=64)
 def _from_tvshow_nfo(tvshow_nfo_path):
     items = {
         "description": "plot",
@@ -764,7 +764,7 @@ def _from_movie_nfo(xmldoc):
     return metadata
 
 
-@lru_cache
+@lru_cache(maxsize=64)
 def from_nfo(full_path):
     metadata = {}
 
@@ -844,7 +844,7 @@ def _tdcat_py(full_path, tivo_mak):
     return details
 
 
-@lru_cache
+@lru_cache(maxsize=64)
 def from_tivo(full_path):
     tdcat_path = config.get_bin("tdcat")
     tivo_mak = config.get_server("tivo_mak")
