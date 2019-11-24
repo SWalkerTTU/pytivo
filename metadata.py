@@ -7,8 +7,9 @@ import os
 import struct
 import subprocess
 import sys
+from typing import Dict, Any, TextIO, Optional, List
 from datetime import datetime
-from xml.dom import minidom
+from xml.dom import Document, minidom  # type: ignore
 from xml.parsers import expat
 
 try:
@@ -16,7 +17,7 @@ try:
 except:
     pass
 
-import mutagen
+import mutagen  # type: ignore
 
 import config
 import plugins.video.transcode
@@ -144,7 +145,7 @@ def human_size(raw):
     return tsize
 
 
-def tag_data(element, tag):
+def tag_data(element, tag: str) -> str:
     for name in tag.split("/"):
         found = False
         for new_element in element.childNodes:
@@ -159,7 +160,7 @@ def tag_data(element, tag):
     return element.firstChild.data
 
 
-def _vtag_data(element, tag):
+def _vtag_data(element, tag: str) -> List[str]:
     for name in tag.split("/"):
         new_element = element.getElementsByTagName(name)
         if not new_element:
@@ -169,30 +170,32 @@ def _vtag_data(element, tag):
     return [x.firstChild.data for x in elements if x.firstChild]
 
 
-def _vtag_data_alternate(element, tag):
+def _vtag_data_alternate(element, tag: str) -> List[str]:
     elements = [element]
     for name in tag.split("/"):
-        new_elements = []
+        new_elements: List[str] = []
         for elmt in elements:
             new_elements += elmt.getElementsByTagName(name)
         elements = new_elements
     return [x.firstChild.data for x in elements if x.firstChild]
 
 
-def _tag_value(element, tag):
+# TODO: type of element?
+def _tag_value(element, tag: str) -> Optional[int]:
     item = element.getElementsByTagName(tag)
     if item:
         value = item[0].attributes["value"].value
         return int(value[0])
+    return None
 
 
 @lru_cache(maxsize=64)
-def from_moov(full_path):
+def from_moov(full_path: str) -> Dict[str, Any]:
     metadata = {}
     len_desc = 0
 
     try:
-        mp4meta = mutagen.File(str(full_path, "utf-8"))
+        mp4meta = mutagen.File(full_path)
         assert mp4meta
     except:
         return {}
@@ -284,7 +287,7 @@ def from_moov(full_path):
                 "screenwriters": "vWriter",
             }
             try:
-                data = plistlib.readPlistFromString(value)
+                data: Dict[str, Any] = plistlib.loads(value)
             except:
                 pass
             else:
@@ -293,7 +296,7 @@ def from_moov(full_path):
                         metadata[items[item]] = [x["name"] for x in data[item]]
         elif key == "----:com.pyTivo.pyTivo:tiVoINFO" and "plistlib" in sys.modules:
             try:
-                data = plistlib.readPlistFromString(value)
+                data = plistlib.loads(value)
             except:
                 pass
             else:
@@ -303,7 +306,7 @@ def from_moov(full_path):
     return metadata
 
 
-def from_mscore(rawmeta):
+def from_mscore(rawmeta: mutagen.FileType) -> Dict[str, Any]:
     metadata = {}
     keys = {
         "title": ["Title"],
@@ -352,9 +355,9 @@ def from_mscore(rawmeta):
 
 
 @lru_cache(maxsize=64)
-def from_dvrms(full_path):
+def from_dvrms(full_path: str) -> Dict[str, Any]:
     try:
-        rawmeta = mutagen.File(str(full_path, "utf-8"))
+        rawmeta = mutagen.File(full_path)
         assert rawmeta
     except:
         return {}
@@ -363,7 +366,7 @@ def from_dvrms(full_path):
     return metadata
 
 
-def from_eyetv(full_path):
+def from_eyetv(full_path: str) -> Dict[str, Any]:
     keys = {
         "TITLE": "title",
         "SUBTITLE": "episodeTitle",
@@ -371,8 +374,8 @@ def from_eyetv(full_path):
         "YEAR": "movieYear",
         "EPISODENUM": "episodeNumber",
     }
-    metadata = {}
-    path = os.path.dirname(str(full_path, "utf-8"))
+    metadata: Dict[str, Any] = {}
+    path = os.path.dirname(full_path)
     eyetvp = [x for x in os.listdir(path) if x.endswith(".eyetvp")][0]
     eyetvp = os.path.join(path, eyetvp)
     try:
@@ -408,9 +411,8 @@ def from_eyetv(full_path):
     return metadata
 
 
-def from_text(full_path):
-    metadata = {}
-    full_path = str(full_path, "utf-8")
+def from_text(full_path: str) -> Dict[str, Any]:
+    metadata: Dict[str, Any] = {}
     path, name = os.path.split(full_path)
     title, ext = os.path.splitext(name)
 
@@ -471,11 +473,11 @@ def from_text(full_path):
     return metadata
 
 
-def basic(full_path, mtime=None):
+def basic(full_path: str, mtime: Optional[float] = None) -> Dict[str, Any]:
     base_path, name = os.path.split(full_path)
     title, ext = os.path.splitext(name)
     if not mtime:
-        mtime = os.path.getmtime(str(full_path, "utf-8"))
+        mtime = os.path.getmtime(full_path)
     try:
         originalAirDate = datetime.utcfromtimestamp(mtime)
     except:
@@ -495,7 +497,7 @@ def basic(full_path, mtime=None):
     return metadata
 
 
-def from_container(xmldoc):
+def from_container(xmldoc: Document) -> Dict[str, Any]:
     metadata = {}
 
     keys = {
@@ -515,7 +517,7 @@ def from_container(xmldoc):
     details = xmldoc.getElementsByTagName("Details")[0]
 
     for key in keys:
-        data = tag_data(details, keys[key])
+        data: Any = tag_data(details, keys[key])
         if data:
             if key == "description":
                 data = data.replace(TRIBUNE_CR, "").replace(ROVI_CR, "")
@@ -531,8 +533,9 @@ def from_container(xmldoc):
     return metadata
 
 
-def from_details(xml):
+def from_details(xml: str) -> Dict[str, Any]:
     metadata = {}
+    data: Any
 
     xmldoc = minidom.parseString(xml)
     showing = xmldoc.getElementsByTagName("showing")[0]
@@ -597,7 +600,7 @@ def from_details(xml):
     return metadata
 
 
-def _nfo_vitems(source, metadata):
+def _nfo_vitems(source: List[str], metadata: Dict[str, Any]) -> Dict[str, Any]:
 
     vItems = {
         "vGenre": "genre",
@@ -620,7 +623,7 @@ def _nfo_vitems(source, metadata):
     return metadata
 
 
-def _parse_nfo(nfo_path, nfo_data=None):
+def _parse_nfo(nfo_path: str, nfo_data: Optional[List[str]] = None) -> Document:
     # nfo files can contain XML or a URL to seed the XBMC metadata scrapers
     # It's also possible to have both (a URL after the XML metadata)
     # pyTivo only parses the XML metadata, but we'll try to stip the URL
@@ -647,7 +650,7 @@ def _parse_nfo(nfo_path, nfo_data=None):
 
 
 @lru_cache(maxsize=64)
-def _from_tvshow_nfo(tvshow_nfo_path):
+def _from_tvshow_nfo(tvshow_nfo_path: str) -> Dict[str, Any]:
     items = {
         "description": "plot",
         "title": "title",
@@ -656,7 +659,7 @@ def _from_tvshow_nfo(tvshow_nfo_path):
         "tvRating": "mpaa",
     }
 
-    metadata = {}
+    metadata: Dict[str, Any] = {}
 
     xmldoc = _parse_nfo(tvshow_nfo_path)
     if not xmldoc:
@@ -678,8 +681,8 @@ def _from_tvshow_nfo(tvshow_nfo_path):
     return metadata
 
 
-def _from_episode_nfo(nfo_path, xmldoc):
-    metadata = {}
+def _from_episode_nfo(nfo_path: str, xmldoc: Document) -> Dict[str, Any]:
+    metadata: Dict[str, Any] = {}
 
     items = {
         "description": "plot",
@@ -718,7 +721,7 @@ def _from_episode_nfo(nfo_path, xmldoc):
     if not season or season == "-1":
         season = tag_data(episode, "season")
     if not season:
-        season = 1
+        season = "1"
 
     ep_num = tag_data(episode, "displayepisode")
     if not ep_num or ep_num == "-1":
@@ -734,8 +737,8 @@ def _from_episode_nfo(nfo_path, xmldoc):
     return metadata
 
 
-def _from_movie_nfo(xmldoc):
-    metadata = {}
+def _from_movie_nfo(xmldoc: Document) -> Dict[str, Any]:
+    metadata: Dict[str, Any] = {}
 
     movie = xmldoc.getElementsByTagName("movie")
     if movie:
@@ -765,8 +768,8 @@ def _from_movie_nfo(xmldoc):
 
 
 @lru_cache(maxsize=64)
-def from_nfo(full_path):
-    metadata = {}
+def from_nfo(full_path: str) -> Dict[str, Any]:
+    metadata: Dict[str, Any] = {}
 
     nfo_path = "%s.nfo" % os.path.splitext(full_path)[0]
     if not os.path.exists(nfo_path):
@@ -782,6 +785,8 @@ def from_nfo(full_path):
     elif xmldoc.getElementsByTagName("movie"):
         # it's a movie
         metadata.update(_from_movie_nfo(xmldoc))
+
+    rating: Optional[int]
 
     # common nfo cleanup
     if "starRating" in metadata:
@@ -800,16 +805,13 @@ def from_nfo(full_path):
     return metadata
 
 
-def _tdcat_bin(tdcat_path, full_path, tivo_mak):
-    fname = str(full_path, "utf-8")
-    if mswindows:
-        fname = fname.encode("cp1252")
-    tcmd = [tdcat_path, "-m", tivo_mak, "-2", fname]
-    tdcat = subprocess.Popen(tcmd, stdout=subprocess.PIPE)
-    return tdcat.stdout.read()
+def _tdcat_bin(tdcat_path: str, full_path: str, tivo_mak: str) -> str:
+    tcmd = [tdcat_path, "-m", tivo_mak, "-2", full_path]
+    tdcat = subprocess.run(tcmd, stdout=subprocess.PIPE, universal_newlines=True)
+    return tdcat.stdout
 
 
-def _tdcat_py(full_path, tivo_mak):
+def _tdcat_py(full_path: str, tivo_mak: str) -> str:
     xml_data = {}
 
     tfile = open(full_path, "rb")
@@ -833,8 +835,8 @@ def _tdcat_py(full_path, tivo_mak):
     if chunk["enc"]:
         xml_key = xml_data[3]["data"]
 
-        hexmak = hashlib.md5("tivo:TiVo DVR:" + tivo_mak).hexdigest()
-        key = hashlib.sha1(hexmak + xml_key).digest()[:16] + "\0\0\0\0"
+        hexmak = hashlib.md5(b"tivo:TiVo DVR:" + tivo_mak.encode("utf-8")).hexdigest()
+        key = hashlib.sha1(hexmak + xml_key).digest()[:16] + b"\0\0\0\0"
 
         turkey = hashlib.sha1(key[:17]).digest()
         turiv = hashlib.sha1(key).digest()
@@ -845,9 +847,9 @@ def _tdcat_py(full_path, tivo_mak):
 
 
 @lru_cache(maxsize=64)
-def from_tivo(full_path):
+def from_tivo(full_path: str) -> Dict[str, str]:
     tdcat_path = config.get_bin("tdcat")
-    tivo_mak = config.get_server("tivo_mak")
+    tivo_mak = config.get_server("tivo_mak", "")
     try:
         assert tivo_mak
         if tdcat_path:
@@ -861,19 +863,11 @@ def from_tivo(full_path):
     return metadata
 
 
-def force_utf8(text):
-    if type(text) == str:
-        try:
-            text = text.decode("utf8")
-        except:
-            if sys.platform == "darwin":
-                text = text.decode("macroman")
-            else:
-                text = text.decode("cp1252")
-    return text.encode("utf-8")
+def force_utf8(text: str) -> str:
+    return text.encode("utf-8").decode("utf-8")
 
 
-def dump(output, metadata):
+def dump(output: TextIO, metadata: Dict[str, Any]) -> None:
     for key in metadata:
         value = metadata[key]
         if type(value) == list:
@@ -888,7 +882,7 @@ def dump(output, metadata):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        metadata = {}
+        metadata: Dict[str, Any] = {}
         config.init([])
         logging.basicConfig()
         fname = force_utf8(sys.argv[1])

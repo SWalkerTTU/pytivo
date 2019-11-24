@@ -9,6 +9,7 @@ import sys
 import tempfile
 import threading
 import time
+from typing import Dict, Any
 
 import lrucache
 
@@ -18,8 +19,8 @@ import metadata
 logger = logging.getLogger("pyTivo.video.transcode")
 
 info_cache = lrucache.LRUCache(1000)
-ffmpeg_procs = {}
-reapers = {}
+ffmpeg_procs: Dict[str, Any] = {}
+reapers: Dict[str, Any] = {}
 
 GOOD_MPEG_FPS = ["23.98", "24.00", "25.00", "29.97", "30.00", "50.00", "59.94", "60.00"]
 
