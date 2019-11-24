@@ -300,7 +300,7 @@ class IVLengthError(Exception):
 
 class Turing:
     def __init__(self, key: Optional[bytes] = None, iv: Optional[bytes] = None):
-        self.sbox = [[], [], [], []]  # precalculated S-boxes
+        self.sbox: List[List[int]] = [[], [], [], []]  # precalculated S-boxes
 
         if key:
             self.setkey(key)
