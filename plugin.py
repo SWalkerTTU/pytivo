@@ -16,6 +16,23 @@ class Error:
     CONTENT_TYPE = "text/html"
 
 
+class FileData:
+    def __init__(self, name, isdir):
+        self.name = name
+        self.isdir = isdir
+        st = os.stat(str(name, "utf-8"))
+        self.mdate = st.st_mtime
+        self.size = st.st_size
+
+
+class SortList:
+    def __init__(self, files):
+        self.files = files
+        self.unsorted = True
+        self.sortby = None
+        self.last_start = 0
+
+
 def GetPlugin(name: str):
     try:
         module_name = ".".join(["plugins", name, name])
@@ -130,21 +147,6 @@ class Plugin(object):
     def get_files(
         self, handler, query, filterFunction=None, force_alpha=False, allow_recurse=True
     ) -> Tuple[List[Any], int, int]:
-        class FileData:
-            def __init__(self, name, isdir):
-                self.name = name
-                self.isdir = isdir
-                st = os.stat(str(name, "utf-8"))
-                self.mdate = st.st_mtime
-                self.size = st.st_size
-
-        class SortList:
-            def __init__(self, files):
-                self.files = files
-                self.unsorted = True
-                self.sortby = None
-                self.last_start = 0
-
         def build_recursive_list(path, recurse=True):
             files = []
             path = str(path, "utf-8")
@@ -174,9 +176,9 @@ class Plugin(object):
         recurse = allow_recurse and query.get("Recurse", ["No"])[0] == "Yes"
 
         filelist = SortList([])
-        # TODO: use @functools.lru_cache instead
+        # TODO: use @functools.lru_cache instead (but mtime not supplied?)
         rc = self.recurse_cache
-        # TODO: use @functools.lru_cache instead
+        # TODO: use @functools.lru_cache instead (but mtime not supplied?)
         dc = self.dir_cache
         if recurse:
             if path in rc and rc.mtime(path) + 300 >= time.time():
