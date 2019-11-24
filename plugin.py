@@ -29,25 +29,6 @@ def GetPlugin(name):
         return Error
 
 
-class EncodeUnicode(Filter):
-    def filter(self, val, **kw):
-        """Encode Unicode strings, by default in UTF-8"""
-
-        encoding = kw.get("encoding", "utf8")
-
-        if type(val) == str:
-            try:
-                val = val.decode("utf8")
-            except:
-                if sys.platform == "darwin":
-                    val = val.decode("macroman")
-                else:
-                    val = val.decode("cp1252")
-        elif type(val) != str:
-            val = str(val)
-        return val.encode(encoding)
-
-
 class Plugin(object):
 
     random_lock = threading.Lock()

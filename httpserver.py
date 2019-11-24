@@ -16,7 +16,7 @@ from typing import Dict, Any, Optional, List, Tuple
 
 from Cheetah.Template import Template  # type: ignore
 import config
-from plugin import GetPlugin, EncodeUnicode
+from plugin import GetPlugin
 from beacon import Beacon
 
 SCRIPTDIR = os.path.dirname(__file__)
@@ -339,7 +339,6 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                 self.server.logger.error(section + " - " + str(msg), exc_info=True)
         t = Template(
             file=os.path.join(SCRIPTDIR, "templates", "root_container.tmpl"),
-            # filter=EncodeUnicode)
         )
         if self.server.beacon.bd:
             t.renamed = self.server.beacon.bd.renamed
@@ -354,7 +353,6 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
     def infopage(self) -> None:
         t = Template(
             file=os.path.join(SCRIPTDIR, "templates", "info_page.tmpl"),
-            # filter=EncodeUnicode)
         )
         t.admin = ""
 
