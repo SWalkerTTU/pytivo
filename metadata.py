@@ -9,7 +9,7 @@ import subprocess
 import sys
 from typing import Dict, Any, TextIO, Optional, List
 from datetime import datetime
-from xml.dom import Document, minidom  # type: ignore
+from xml.dom import Node, Document, minidom  # type: ignore
 from xml.parsers import expat
 
 try:
@@ -145,8 +145,7 @@ def human_size(raw: Any) -> str:
     return tsize
 
 
-# TODO: type of element?
-def tag_data(element, tag: str) -> str:
+def tag_data(element: Node, tag: str) -> str:
     for name in tag.split("/"):
         found = False
         for new_element in element.childNodes:
@@ -161,8 +160,7 @@ def tag_data(element, tag: str) -> str:
     return element.firstChild.data
 
 
-# TODO: type of element?
-def _vtag_data(element, tag: str) -> List[str]:
+def _vtag_data(element: Node, tag: str) -> List[str]:
     for name in tag.split("/"):
         new_element = element.getElementsByTagName(name)
         if not new_element:
@@ -172,8 +170,7 @@ def _vtag_data(element, tag: str) -> List[str]:
     return [x.firstChild.data for x in elements if x.firstChild]
 
 
-# TODO: type of element?
-def _vtag_data_alternate(element, tag: str) -> List[str]:
+def _vtag_data_alternate(element: Node, tag: str) -> List[str]:
     elements = [element]
     for name in tag.split("/"):
         new_elements: List[str] = []
@@ -183,8 +180,7 @@ def _vtag_data_alternate(element, tag: str) -> List[str]:
     return [x.firstChild.data for x in elements if x.firstChild]
 
 
-# TODO: type of element?
-def _tag_value(element, tag: str) -> Optional[int]:
+def _tag_value(element: Node, tag: str) -> Optional[int]:
     item = element.getElementsByTagName(tag)
     if item:
         value = item[0].attributes["value"].value
