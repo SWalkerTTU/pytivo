@@ -82,7 +82,7 @@ def GetPlugin(name: str) -> Union["Plugin", Error]:
         plugin = getattr(module, module.CLASS_NAME)()  # type: ignore
         return plugin
     except ImportError:
-        # TODO 20191124: Actually log this error
+        # TODO 20191124: log this error instead of printing
         print(
             "Error no", name, "plugin exists. Check the type " "setting for your share."
         )
@@ -101,6 +101,8 @@ class Plugin:
     recurse_cache = LRUCache(5)
     dir_cache = LRUCache(10)
 
+    # TODO 20191124: What is going on here with __it__
+    # TODO 20191124: add types to this
     def __new__(cls, *args, **kwds):
         it = cls.__dict__.get("__it__")
         if it is not None:
@@ -117,24 +119,34 @@ class Plugin:
     ) -> None:
         handler.send_content_file(path)
 
-    def get_local_base_path(self, handler: "TivoHTTPHandler", query):
+    def get_local_base_path(
+        self, handler: "TivoHTTPHandler", query: Dict[str, Any]
+    ) -> str:
         return os.path.normpath(handler.container["path"])
 
-    def get_local_path(self, handler: "TivoHTTPHandler", query):
+    def get_local_path(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> str:
 
         subcname = query["Container"][0]
 
         path = self.get_local_base_path(handler, query)
         for folder in subcname.split("/")[1:]:
             if folder == "..":
-                return False
+                # TODO 20191124: check that "" as error is ok
+                return ""
             path = os.path.join(path, folder)
         return path
 
-    def item_count(self, handler: "TivoHTTPHandler", query, cname, files, last_start=0):
+    def item_count(
+        self,
+        handler: "TivoHTTPHandler",
+        query: Dict[str, Any],
+        cname: str,
+        files: List[FileData],
+        last_start: int = 0,
+    ) -> Tuple[List[FileData], int, int]:
         """Return only the desired portion of the list, as specified by 
-           ItemCount, AnchorItem and AnchorOffset. 'files' is either a 
-           list of strings, OR a list of objects with a 'name' attribute.
+           ItemCount, AnchorItem and AnchorOffset. 'files' is
+           a list of objects with a 'name' attribute.
         """
 
         totalFiles = len(files)
@@ -158,10 +170,11 @@ class Plugin:
                 if not "://" in anchor:
                     anchor = os.path.normpath(anchor)
 
-                if type(files[0]) == str:
-                    filenames = files
-                else:
-                    filenames = [x.name for x in files]
+                # if type(files[0]) == str:
+                #    filenames = files
+                # else:
+                #    filenames = [x.name for x in files]
+                filenames = [x.name for x in files]
                 try:
                     index = filenames.index(anchor, last_start)
                 except ValueError:
@@ -189,8 +202,8 @@ class Plugin:
     def get_files(
         self,
         handler: "TivoHTTPHandler",
-        query,
-        filterFunction=None,
+        query: Dict[str, Any],
+        filterFunction: Optional[Callable] = None,
         force_alpha: bool = False,
         allow_recurse: bool = True,
     ) -> Tuple[List[FileData], int, int]:
@@ -211,7 +224,7 @@ class Plugin:
             if path in rc and rc.mtime(path) + 300 >= time.time():
                 filelist = rc[path]
         else:
-            updated = os.path.getmtime(str(path, "utf-8"))
+            updated = os.path.getmtime(path)
             if path in dc and dc.mtime(path) >= updated:
                 filelist = dc[path]
             for p in rc:
