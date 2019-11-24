@@ -15,6 +15,9 @@ tivos: Dict[str, Dict[str, Any]]
 guid: uuid.UUID
 config_files: List[str]
 tivos_found: bool
+bin_paths: Dict[str, str]
+config: configparser.ConfigParser
+configs_found: List[str]
 
 class Bdict(dict):
     def getboolean(self, x):
@@ -391,7 +394,7 @@ def get_tsn(name, tsn=None, raw=False):
 # Parse a bitrate using the SI/IEEE suffix values as if by ffmpeg
 # For example, 2K==2000, 2Ki==2048, 2MB==16000000, 2MiB==16777216
 # Algorithm: http://svn.mplayerhq.hu/ffmpeg/trunk/libavcodec/eval.c
-def strtod(value):
+def strtod(value) -> int:
     prefixes = {
         "y": -24,
         "z": -21,
@@ -434,14 +437,13 @@ def strtod(value):
     return value
 
 
-def init_logging():
+def init_logging() -> None:
     if (
         config.has_section("loggers")
         and config.has_section("handlers")
         and config.has_section("formatters")
     ):
-
-        logging.config.fileConfig(config_files)
+        logging.config.fileConfig(config)
 
     elif getDebug():
         logging.basicConfig(level=logging.DEBUG)
