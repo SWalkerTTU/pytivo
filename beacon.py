@@ -6,6 +6,7 @@ import time
 import uuid
 from threading import Timer
 from urllib.parse import quote
+from typing import List, Any, Dict, Optional
 
 import zeroconf
 
@@ -18,24 +19,26 @@ PLATFORM_VIDEO = "pc/pyTivo"  # For the nice icon
 
 
 class ZCListener:
-    def __init__(self, names):
+    def __init__(self, names: List[str]) -> None:
         self.names = names
 
-    def remove_service(self, server, type, name):
-        self.names.remove(name.replace("." + type, ""))
+    # TODO: what types for server, type_, name ??
+    def remove_service(self, server:zeroconf.Zeroconf, type_: str, name: str) -> None:
+        self.names.remove(name.replace("." + type_, ""))
 
-    def add_service(self, server, type, name):
-        self.names.append(name.replace("." + type, ""))
+    # TODO: what types for server, type_, name ??
+    def add_service(self, server:zeroconf.Zeroconf, type_: str, name: str) -> None:
+        self.names.append(name.replace("." + type_, ""))
 
 
 class ZCBroadcast:
-    def __init__(self, logger):
+    def __init__(self, logger: logging.Logger) -> None:
         """ Announce our shares via Zeroconf. """
-        self.share_names = []
-        self.share_info = []
+        self.share_names: List[str] = []
+        self.share_info: List[zeroconf.ServiceInfo] = []
         self.logger = logger
         self.rz = zeroconf.Zeroconf()
-        self.renamed = {}
+        self.renamed: Dict[str, Any] = {}
         old_titles = self.scan()
         address = socket.inet_aton(config.get_ip())
         port = int(config.getPort())
@@ -74,13 +77,13 @@ class ZCBroadcast:
                     0,
                     desc,
                 )
-                self.rz.registerService(info)
+                self.rz.register_service(info)
                 self.share_info.append(info)
 
-    def scan(self):
+    def scan(self) -> List[str]:
         """ Look for TiVos using Zeroconf. """
         VIDS = "_tivo-videos._tcp.local."
-        names = []
+        names: List[str] = []
 
         self.logger.info("Scanning for TiVos...")
 
@@ -98,10 +101,8 @@ class ZCBroadcast:
         for name in names:
             info = self.rz.get_service_info(VIDS, name + "." + VIDS)
             if info:
-                tsn = info.properties.get(b"TSN")
-                if config.get_server("togo_all"):
-                    tsn = info.properties.get(b"tsn", tsn)
-                if tsn:
+                tsn = tsn_from_service_info(info)
+                if tsn is not None:
                     address = socket.inet_ntoa(info.address)
                     port = info.port
                     config.tivos[tsn] = {"name": name, "address": address, "port": port}
@@ -110,18 +111,19 @@ class ZCBroadcast:
 
         return names
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         self.logger.info("Unregistering: %s" % " ".join(self.share_names))
         for info in self.share_info:
-            self.rz.unregisterService(info)
+            self.rz.unregister_service(info)
         self.rz.close()
 
 
 class Beacon:
-    def __init__(self):
+    def __init__(self) -> None:
         self.UDPSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.UDPSock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.services = []
+        self.services: List[bytes] = []
+        self.bd: Optional[ZCBroadcast]
 
         self.platform = PLATFORM_VIDEO
         for section, settings in config.getShares():
@@ -143,14 +145,14 @@ class Beacon:
         else:
             self.bd = None
 
-    def add_service(self, service):
+    def add_service(self, service: bytes) -> None:
         self.services.append(service)
         self.send_beacon()
 
-    def format_services(self):
+    def format_services(self) -> bytes:
         return b";".join(self.services)
 
-    def format_beacon(self, conntype, services=True):
+    def format_beacon(self, conntype: bytes, services: bool = True) -> bytes:
         beacon = [
             b"tivoconnect=1",
             b"method=%s" % conntype,
@@ -166,7 +168,7 @@ class Beacon:
 
         return b"\n".join(beacon) + b"\n"
 
-    def send_beacon(self):
+    def send_beacon(self) -> None:
         beacon_ips = config.getBeaconAddresses()
         beacon = self.format_beacon(b"broadcast")
         for beacon_ip in beacon_ips.split():
@@ -181,18 +183,18 @@ class Beacon:
                 except Exception as e:
                     print(e)
 
-    def start(self):
+    def start(self) -> None:
         self.send_beacon()
         self.timer = Timer(60, self.start)
         self.timer.start()
 
-    def stop(self):
+    def stop(self) -> None:
         self.timer.cancel()
         if self.bd:
             self.bd.shutdown()
 
-    def recv_bytes(self, sock, length):
-        block = ""
+    def recv_bytes(self, sock: socket.socket, length: int) -> bytes:
+        block = b""
         while len(block) < length:
             add = sock.recv(length - len(block))
             if not add:
@@ -200,11 +202,11 @@ class Beacon:
             block += add
         return block
 
-    def recv_packet(self, sock) -> bytes:
+    def recv_packet(self, sock: socket.socket) -> bytes:
         length = struct.unpack("!I", self.recv_bytes(sock, 4))[0]
         return self.recv_bytes(sock, length)
 
-    def send_packet(self, sock, packet) -> None:
+    def send_packet(self, sock: socket.socket, packet: bytes) -> None:
         sock.sendall(struct.pack("!I", len(packet)) + packet)
 
     def listen(self) -> None:
@@ -230,7 +232,6 @@ class Beacon:
 
         _thread.start_new_thread(server, ())
 
-    # TODO 20191123: this seems screwed up.
     def get_name(self, address: str) -> str:
         """ Exchange beacons, and extract the machine name. """
         our_beacon = self.format_beacon(b"connected", False)
@@ -249,3 +250,19 @@ class Beacon:
             return name_re.groups()[0]
         else:
             return address
+
+
+def tsn_from_service_info(info) -> Optional[str]:
+    tsn = info.properties.get(b"TSN")
+    if config.get_server("togo_all"):
+        tsn = info.properties.get(b"tsn", tsn)
+
+    if tsn is None:
+        return None
+
+    if isinstance(tsn, bytes):
+        tsn_str = tsn.decode("utf-8")
+    else:
+        tsn_str = str(tsn)
+
+    return tsn_str

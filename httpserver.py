@@ -54,7 +54,7 @@ UNSUP = "<h3>Unsupported Command</h3> <p>Query:</p> <ul>%s</ul>"
 class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     def __init__(
         self, server_address: Tuple[str, int], RequestHandlerClass: type
-    ):
+    ) -> None:
         self.containers: Dict[str, Any] = {}
         self.beacon = Beacon()  # TODO 20191123 think about: set empty beacon to start
         self.stop = False
@@ -89,7 +89,7 @@ class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
     def __init__(
         self, request: bytes, client_address: Tuple[str, int], server: TivoHTTPServer
-    ):
+    ) -> None:
         self.wbufsize = 0x10000
         self.server_version = "pyTivo/1.0"
         self.protocol_version = "HTTP/1.1"
@@ -114,7 +114,6 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         tsn = self.headers.get("TiVo_TCD_ID", self.headers.get("tsn", ""))
         if not self.authorize(tsn):
             return
-
         if tsn and (not config.tivos_found or tsn in config.tivos):
             attr = config.tivos.get(tsn, {})
             if "address" not in attr:
