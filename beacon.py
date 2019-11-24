@@ -254,7 +254,7 @@ class Beacon:
 
 def tsn_from_service_info(info) -> Optional[str]:
     tsn = info.properties.get(b"TSN")
-    if config.get_server("togo_all"):
+    if config.get_server("togo_all", ""):
         tsn = info.properties.get(b"tsn", tsn)
 
     if tsn is None:

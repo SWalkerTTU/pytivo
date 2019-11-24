@@ -9,7 +9,7 @@ import sys
 import uuid
 from configparser import NoOptionError
 from functools import reduce
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Tuple
 
 tivos: Dict[str, Dict[str, Any]]
 guid: uuid.UUID
@@ -19,12 +19,13 @@ bin_paths: Dict[str, str]
 config: configparser.ConfigParser
 configs_found: List[str]
 
+
 class Bdict(dict):
     def getboolean(self, x):
         return self.get(x, "False").lower() in ("1", "yes", "true", "on")
 
 
-def init(argv):
+def init(argv: List[str]) -> None:
     global tivos
     global guid
     global config_files
@@ -51,7 +52,7 @@ def init(argv):
     reset()
 
 
-def reset():
+def reset() -> None:
     global bin_paths
     global config
     global configs_found
@@ -77,41 +78,42 @@ def reset():
             config.add_section(section)
 
 
-def write():
+def write() -> None:
     f = open(configs_found[-1], "w")
     config.write(f)
     f.close()
 
 
-def tivos_by_ip(tivoIP):
+def tivos_by_ip(tivoIP: str) -> str:
     for key, value in list(tivos.items()):
         if value["address"] == tivoIP:
             return key
+    return ""
 
 
-def get_server(name, default=None):
+def get_server(name: str, default: str) -> str:
     if config.has_option("Server", name):
         return config.get("Server", name)
     else:
         return default
 
 
-def getGUID():
+def getGUID() -> str:
     return str(guid)
 
 
-def get_ip(tsn=None):
-    try:
-        assert tsn
+def get_ip(tsn: Optional[str] = None) -> str:
+    if tsn is not None:
         dest_ip = tivos[tsn]["address"]
-    except:
+    else:
         dest_ip = "4.2.2.1"
+
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect((dest_ip, 123))
     return s.getsockname()[0]
 
 
-def get_zc():
+def get_zc() -> bool:
     opt = get_server("zeroconf", "auto").lower()
 
     if opt == "auto":
@@ -127,25 +129,25 @@ def get_zc():
     return True
 
 
-def getBeaconAddresses():
+def getBeaconAddresses() -> str:
     return get_server("beacon", "255.255.255.255")
 
 
-def getPort():
+def getPort() -> str:
     return get_server("port", "9032")
 
 
-def get169Blacklist(tsn):  # tivo does not pad 16:9 video
-    return tsn and not isHDtivo(tsn) and not get169Letterbox(tsn)
+def get169Blacklist(tsn: str) -> bool:  # tivo does not pad 16:9 video
+    return bool(tsn) and not isHDtivo(tsn) and not get169Letterbox(tsn)
     # verified Blacklist Tivo's are ('130', '240', '540')
     # It is assumed all remaining non-HD and non-Letterbox tivos are Blacklist
 
 
-def get169Letterbox(tsn):  # tivo pads 16:9 video for 4:3 display
-    return tsn and tsn[:3] in ["649"]
+def get169Letterbox(tsn: str) -> bool:  # tivo pads 16:9 video for 4:3 display
+    return bool(tsn) and tsn[:3] in ["649"]
 
 
-def get169Setting(tsn):
+def get169Setting(tsn: str) -> bool:
     if not tsn:
         return True
 
@@ -163,11 +165,11 @@ def get169Setting(tsn):
     return True
 
 
-def getAllowedClients():
+def getAllowedClients() -> List[str]:
     return get_server("allowedips", "").split()
 
 
-def getIsExternal(tsn):
+def getIsExternal(tsn: str) -> bool:
     tsnsect = "_tivo_" + tsn
     if tsnsect in config.sections():
         if config.has_option(tsnsect, "external"):
@@ -179,11 +181,11 @@ def getIsExternal(tsn):
     return False
 
 
-def isTsnInConfig(tsn):
+def isTsnInConfig(tsn: str) -> bool:
     return ("_tivo_" + tsn) in config.sections()
 
 
-def getShares(tsn=""):
+def getShares(tsn: str = "") -> List[Tuple[str, Bdict]]:
     shares = [
         (section, Bdict(config.items(section)))
         for section in config.sections()
@@ -206,21 +208,21 @@ def getShares(tsn=""):
     shares.sort()
 
     if get_server("nosettings", "false").lower() in ["false", "no", "off"]:
-        shares.append(("Settings", {"type": "settings"}))
-    if get_server("tivo_mak") and get_server("togo_path"):
-        shares.append(("ToGo", {"type": "togo"}))
+        shares.append(("Settings", Bdict({"type": "settings"})))
+    if get_server("tivo_mak", "") and get_server("togo_path", ""):
+        shares.append(("ToGo", Bdict({"type": "togo"})))
 
     return shares
 
 
-def getDebug():
+def getDebug() -> bool:
     try:
         return config.getboolean("Server", "debug")
     except:
         return False
 
 
-def getOptres(tsn=None):
+def getOptres(tsn: str) -> bool:
     try:
         return config.getboolean("_tivo_" + tsn, "optres")
     except:
@@ -233,7 +235,7 @@ def getOptres(tsn=None):
                 return False
 
 
-def get_bin(fname):
+def get_bin(fname: str) -> Optional[str]:
     global bin_paths
 
     logger = logging.getLogger("pyTivo.config")
@@ -254,9 +256,12 @@ def get_bin(fname):
     else:
         fext = ""
 
-    for path in [os.path.join(os.path.dirname(__file__), "bin")] + os.getenv(
-        "PATH"
-    ).split(os.pathsep):
+    sys_path = os.getenv("PATH")
+    if sys_path is not None:
+        sys_path_list = sys_path.split(os.pathsep)
+    else:
+        sys_path_list = []
+    for path in [os.path.join(os.path.dirname(__file__), "bin")] + sys_path_list:
         fpath = os.path.join(path, fname + fext)
         if os.path.exists(fpath) and os.path.isfile(fpath):
             bin_paths[fname] = fpath
@@ -266,44 +271,44 @@ def get_bin(fname):
     return None
 
 
-def getFFmpegWait():
+def getFFmpegWait() -> int:
     if config.has_option("Server", "ffmpeg_wait"):
         return max(int(float(config.get("Server", "ffmpeg_wait"))), 1)
     else:
         return 0
 
 
-def getFFmpegPrams(tsn):
+def getFFmpegPrams(tsn: str) -> Optional[str]:
     return get_tsn("ffmpeg_pram", tsn, True)
 
 
-def isHDtivo(tsn):  # TSNs of High Definition TiVos
+def isHDtivo(tsn: str) -> bool:  # TSNs of High Definition TiVos
     return bool(tsn and tsn[0] >= "6" and tsn[:3] != "649")
 
 
-def get_ts_flag():
+def get_ts_flag() -> str:
     return get_server("ts", "auto").lower()
 
 
-def is_ts_capable(tsn):  # tsn's of Tivos that support transport streams
+def is_ts_capable(tsn: str) -> bool:  # tsn's of Tivos that support transport streams
     return bool(tsn and (tsn[0] >= "7" or tsn.startswith("663")))
 
 
-def getValidWidths():
+def getValidWidths() -> List[int]:
     return [1920, 1440, 1280, 720, 704, 544, 480, 352]
 
 
-def getValidHeights():
+def getValidHeights() -> List[int]:
     return [1080, 720, 480]  # Technically 240 is also supported
 
 
 # Return the number in list that is nearest to x
 # if two values are equidistant, return the larger
-def nearest(x, list):
-    return reduce(lambda a, b: closest(x, a, b), list)
+def nearest(x: int, list_: List[int]) -> int:
+    return reduce(lambda a, b: closest(x, a, b), list_)
 
 
-def closest(x, a, b):
+def closest(x: int, a: int, b: int) -> int:
     da = abs(x - a)
     db = abs(x - b)
     if da < db or (da == db and a > b):
@@ -312,27 +317,27 @@ def closest(x, a, b):
         return b
 
 
-def nearestTivoHeight(height):
+def nearestTivoHeight(height: int) -> int:
     return nearest(height, getValidHeights())
 
 
-def nearestTivoWidth(width):
+def nearestTivoWidth(width: int) -> int:
     return nearest(width, getValidWidths())
 
 
-def getTivoHeight(tsn):
+def getTivoHeight(tsn: str) -> int:
     return [480, 1080][isHDtivo(tsn)]
 
 
-def getTivoWidth(tsn):
+def getTivoWidth(tsn: str) -> int:
     return [544, 1920][isHDtivo(tsn)]
 
 
-def _trunc64(i):
-    return max(int(strtod(i)) / 64000, 1) * 64
+def _trunc64(i: str) -> int:
+    return max(strtod(i) // 64000, 1) * 64
 
 
-def getAudioBR(tsn=None):
+def getAudioBR(tsn: str) -> str:
     rate = get_tsn("audio_br", tsn)
     if not rate:
         rate = "448k"
@@ -341,32 +346,32 @@ def getAudioBR(tsn=None):
     return str(min(_trunc64(rate), getMaxAudioBR(tsn))) + "k"
 
 
-def _k(i):
-    return str(int(strtod(i)) / 1000) + "k"
+def _k(i: str) -> str:
+    return str(strtod(i) // 1000) + "k"
 
 
-def getVideoBR(tsn=None):
+def getVideoBR(tsn: str) -> str:
     rate = get_tsn("video_br", tsn)
     if rate:
         return _k(rate)
     return ["4096K", "16384K"][isHDtivo(tsn)]
 
 
-def getMaxVideoBR(tsn=None):
+def getMaxVideoBR(tsn: str) -> str:
     rate = get_tsn("max_video_br", tsn)
     if rate:
         return _k(rate)
     return "30000k"
 
 
-def getBuffSize(tsn=None):
+def getBuffSize(tsn: str) -> str:
     size = get_tsn("bufsize", tsn)
     if size:
         return _k(size)
     return ["1024k", "4096k"][isHDtivo(tsn)]
 
 
-def getMaxAudioBR(tsn=None):
+def getMaxAudioBR(tsn: str) -> int:
     rate = get_tsn("max_audio_br", tsn)
     # convert to non-zero multiple of 64 for ffmpeg compatibility
     if rate:
@@ -374,19 +379,19 @@ def getMaxAudioBR(tsn=None):
     return 448
 
 
-def get_section(tsn):
+def get_section(tsn: str) -> str:
     return ["_tivo_SD", "_tivo_HD"][isHDtivo(tsn)]
 
 
-def get_tsn(name, tsn=None, raw=False):
+def get_tsn(name: str, tsn: str, raw: bool = False) -> Optional[str]:
     try:
-        return config.get("_tivo_" + tsn, name, raw)
+        return config.get("_tivo_" + tsn, name, raw=raw)
     except:
         try:
-            return config.get(get_section(tsn), name, raw)
+            return config.get(get_section(tsn), name, raw=raw)
         except:
             try:
-                return config.get("Server", name, raw)
+                return config.get("Server", name, raw=raw)
             except:
                 return None
 
@@ -394,7 +399,7 @@ def get_tsn(name, tsn=None, raw=False):
 # Parse a bitrate using the SI/IEEE suffix values as if by ffmpeg
 # For example, 2K==2000, 2Ki==2048, 2MB==16000000, 2MiB==16777216
 # Algorithm: http://svn.mplayerhq.hu/ffmpeg/trunk/libavcodec/eval.c
-def strtod(value) -> int:
+def strtod(value_str: str) -> int:
     prefixes = {
         "y": -24,
         "z": -21,
@@ -418,7 +423,7 @@ def strtod(value) -> int:
         "Y": 24,
     }
     p = re.compile(r"^(\d+)(?:([yzafpnumcdhkKMGTPEZY])(i)?)?([Bb])?$")
-    m = p.match(value)
+    m = p.match(value_str)
     if not m:
         raise SyntaxError("Invalid bit value syntax")
     (coef, prefix, power, byte) = m.groups()
@@ -434,7 +439,7 @@ def strtod(value) -> int:
             value = float(coef) * pow(10.0, exponent)
     if byte == "B":  # B == Byte, b == bit
         value *= 8
-    return value
+    return int(value)
 
 
 def init_logging() -> None:

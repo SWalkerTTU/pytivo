@@ -63,7 +63,7 @@ class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         http.server.HTTPServer.__init__(self, server_address, RequestHandlerClass)
         self.daemon_threads = True
 
-    def add_container(self, name: str, settings: str) -> None:
+    def add_container(self, name: str, settings: Dict[str, Any]) -> None:
         if name in self.containers or name == "TiVoConnect":
             raise Exception("Container Name in use")
         try:
@@ -358,7 +358,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         )
         t.admin = ""
 
-        if config.get_server("tivo_mak") and config.get_server("togo_path"):
+        if config.get_server("tivo_mak", "") and config.get_server("togo_path", ""):
             t.togo = "<br>Pull from TiVos:<br>"
         else:
             t.togo = ""
