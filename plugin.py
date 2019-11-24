@@ -4,6 +4,7 @@ import shutil
 import sys
 import threading
 import time
+from typing import List, Any, Tuple
 import unicodedata
 import urllib.request, urllib.parse, urllib.error
 
@@ -147,7 +148,7 @@ class Plugin(object):
 
     def get_files(
         self, handler, query, filterFunction=None, force_alpha=False, allow_recurse=True
-    ):
+    ) -> Tuple[List[Any], int, int]:
         class FileData:
             def __init__(self, name, isdir):
                 self.name = name
@@ -191,7 +192,7 @@ class Plugin(object):
 
         recurse = allow_recurse and query.get("Recurse", ["No"])[0] == "Yes"
 
-        filelist = []
+        filelist = SortList([])
         # TODO: use @functools.lru_cache instead
         rc = self.recurse_cache
         # TODO: use @functools.lru_cache instead
