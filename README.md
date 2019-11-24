@@ -1,3 +1,5 @@
+This fork is the port of pyTivo to python 3!
+
 # Description
 
 pyTivo lets you stream most videos from your PC to your unhacked tivo. 
