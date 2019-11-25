@@ -239,10 +239,10 @@ def select_audiocodec(
     if vInfo["aCodec"] in compatiblecodecs:
         aKbps = vInfo["aKbps"]
         aCh = vInfo["aCh"]
-        if aKbps == None:
+        if aKbps is None:
             if not isQuery:
                 vInfoQuery = audio_check(inFile, tsn)
-                if vInfoQuery == None:
+                if vInfoQuery is None:
                     aKbps = None
                     aCh = None
                 else:
@@ -253,7 +253,7 @@ def select_audiocodec(
         if aKbps and int(aKbps) <= config.getMaxAudioBR(tsn):
             # compatible codec and bitrate, do not reencode audio
             codec = "copy"
-        if vInfo["aCodec"] != "ac3" and (aCh == None or aCh > 2):
+        if vInfo["aCodec"] != "ac3" and (aCh is None or aCh > 2):
             codec = "ac3"
     val = ["-c:a", codec]
     if not (codec == "copy" and codectype == "mpeg2video"):
@@ -286,7 +286,7 @@ def select_audiolang(inFile: str, tsn: str) -> str:
         # default to first detected audio stream to begin with
         stream = vInfo["mapAudio"][0][0]
         LOGGER.debug("set first detected audio stream by default: %s" % stream)
-    if audio_lang != None and vInfo["mapVideo"] != None:
+    if audio_lang is not None and vInfo["mapVideo"] is not None:
         langmatch_curr = []
         langmatch_prev = vInfo["mapAudio"][:]
         for lang in audio_lang.replace(" ", "").lower().split(","):
@@ -614,7 +614,7 @@ def tivo_compatible_video(
             message = (False, "vCodec %s not compatible" % codec)
             break
 
-        if vInfo["kbps"] != None:
+        if vInfo["kbps"] is not None:
             abit = max("0", vInfo["aKbps"])
             if (
                 int(vInfo["kbps"]) - int(abit)
@@ -668,7 +668,7 @@ def tivo_compatible_audio(
     while True:
         codec = vInfo.get("aCodec", "")
 
-        if codec == None:
+        if codec is None:
             LOGGER.debug("No audio stream detected")
             break
 
@@ -781,10 +781,10 @@ def video_info(inFile: str, cache: bool = True) -> Dict[str, Any]:
     if limit:
         for i in range(limit * 20):
             time.sleep(0.05)
-            if not ffmpeg.poll() == None:
+            if not ffmpeg.poll() is None:
                 break
 
-        if ffmpeg.poll() == None:
+        if ffmpeg.poll() is None:
             kill(ffmpeg)
             vInfo["Supported"] = False
             if cache:
@@ -794,9 +794,9 @@ def video_info(inFile: str, cache: bool = True) -> Dict[str, Any]:
         ffmpeg.wait()
 
     err_tmp.seek(0)
-    output = err_tmp.read().encode("utf-8")
+    output = err_tmp.read().decode("utf-8")
     err_tmp.close()
-    LOGGER.debug("ffmpeg output=%r" % output)
+    LOGGER.debug("ffmpeg output=%s" % output)
 
     attrs = {
         "container": r"Input #0, ([^,]+),",
@@ -959,13 +959,6 @@ def video_info(inFile: str, cache: bool = True) -> Dict[str, Any]:
                 else:
                     try:
                         key, value = [x.strip() for x in line.split(":", 1)]
-                        try:
-                            value = value.decode("utf-8")
-                        except:
-                            if sys.platform == "darwin":
-                                value = value.decode("macroman")
-                            else:
-                                value = value.decode("cp1252")
                         rawmeta[key] = [value]
                     except:
                         pass
