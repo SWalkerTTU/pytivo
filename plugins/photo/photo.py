@@ -32,6 +32,7 @@ import sys
 import tempfile
 import threading
 import time
+from typing import TYPE_CHECKING, Optional, List, Any, Dict, Callable, Tuple
 import unicodedata
 import urllib.request, urllib.parse, urllib.error
 from io import StringIO
@@ -39,10 +40,11 @@ from xml.sax.saxutils import escape
 
 use_pil = True
 try:
-    from PIL import Image
+    from PIL import Image  # type: ignore
 except ImportError:
     try:
-        import Image
+        # TODO 20191125: what the heck is this library?
+        import Image  # type: ignore
     except ImportError:
         use_pil = False
         print("Python Imaging Library not found; using FFmpeg")
@@ -50,12 +52,36 @@ except ImportError:
 import config
 from Cheetah.Template import Template  # type: ignore
 from lrucache import LRUCache
-from plugin import Plugin, quote, unquote, FileData, build_recursive_list
+from plugin import Plugin, quote, unquote, FileData, build_recursive_list, SortList
 from plugins.video.transcode import kill
+
+if TYPE_CHECKING:
+    from httpserver import TivoHTTPHandler
 
 SCRIPTDIR = os.path.dirname(__file__)
 
 CLASS_NAME = "Photo"
+
+IMAGE_FILE_EXTS = (
+    ".jpg",
+    ".gif",
+    ".png",
+    ".bmp",
+    ".tif",
+    ".xbm",
+    ".xpm",
+    ".pgm",
+    ".pbm",
+    ".ppm",
+    ".pcx",
+    ".tga",
+    ".fpx",
+    ".ico",
+    ".pcd",
+    ".jpeg",
+    ".tiff",
+    ".nef",
+)
 
 # Match Exif date -- YYYY:MM:DD HH:MM:SS
 exif_date = re.compile(r"(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)").search
@@ -78,40 +104,17 @@ with open(iname, "rb") as iname_fh:
 JFIF_TAG = "\xff\xe0\x00\x10JFIF\x00\x01\x02\x00\x00\x01\x00\x01\x00\x00"
 
 
-def ImageFileFilter(f, file_type=""):
-    goodexts = (
-        ".jpg",
-        ".gif",
-        ".png",
-        ".bmp",
-        ".tif",
-        ".xbm",
-        ".xpm",
-        ".pgm",
-        ".pbm",
-        ".ppm",
-        ".pcx",
-        ".tga",
-        ".fpx",
-        ".ico",
-        ".pcd",
-        ".jpeg",
-        ".tiff",
-        ".nef",
-    )
-    return os.path.splitext(f)[1].lower() in goodexts
+def ImageFileFilter(f: str, filter_type: Optional[str] = None) -> bool:
+    return os.path.splitext(f)[1].lower() in IMAGE_FILE_EXTS
 
 
-def send_jpeg(handler, data):
+def send_jpeg(handler: "TivoHTTPHandler", data: bytes) -> None:
     handler.send_fixed(data, "image/jpeg")
 
 
-class SortList:
-    def __init__(self, files):
-        self.files = files
-        self.unsorted = True
-        self.sortby = None
-        self.last_start = 0
+class SortListLock(SortList):
+    def __init__(self, files: List[FileData]):
+        super().__init__(files)
         self.lock = threading.RLock()
 
     def acquire(self, blocking=1):
@@ -216,7 +219,9 @@ class Photo(Plugin):
 
         return rot
 
-    def get_image_pil(self, path, width, height, pshape, rot, attrs):
+    def get_image_pil(
+        self, path, width, height, pshape, rot, attrs
+    ) -> Tuple[bool, bytes]:
         # Load
         try:
             pic = Image.open(str(path, "utf-8"))
@@ -496,14 +501,14 @@ class Photo(Plugin):
         # Build the list
         recurse = query.get("Recurse", ["No"])[0] == "Yes"
 
-        filelist = []
+        filelist = SortListLock([])
         rc = self.recurse_cache
         dc = self.dir_cache
         if recurse:
             if path in rc:
                 filelist = rc[path]
         else:
-            updated = os.path.getmtime(str(path, "utf-8"))
+            updated = os.path.getmtime(path)
             if path in dc and dc.mtime(path) >= updated:
                 filelist = dc[path]
             for p in rc:
@@ -511,7 +516,9 @@ class Photo(Plugin):
                     del rc[p]
 
         if not filelist:
-            filelist = SortList(build_recursive_list(path, recurse, filterFunction, ""))
+            filelist = SortListLock(
+                build_recursive_list(path, recurse, filterFunction, "")
+            )
 
             if recurse:
                 rc[path] = filelist
@@ -579,9 +586,9 @@ class Photo(Plugin):
             elif usedir and not useimg:
                 files = [x for x in files if x.isdir]
 
-        files, total, start = self.item_count(
+        files, total, start_item = self.item_count(
             handler, query, handler.cname, files, filelist.last_start
         )
-        filelist.last_start = start
+        filelist.last_start = start_item
         filelist.release()
-        return files, total, start
+        return files, total, start_item
