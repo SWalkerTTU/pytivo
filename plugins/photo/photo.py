@@ -304,10 +304,10 @@ class Photo(Plugin):
         if limit:
             for i in range(limit * 20):
                 time.sleep(0.05)
-                if not ffmpeg.poll() == None:
+                if not ffmpeg.poll() is None:
                     break
 
-            if ffmpeg.poll() == None:
+            if ffmpeg.poll() is None:
                 kill(ffmpeg)
                 return False, b"FFmpeg timed out"
         else:
@@ -383,10 +383,10 @@ class Photo(Plugin):
         if limit:
             for i in range(limit * 20):
                 time.sleep(0.05)
-                if not ffmpeg.poll() == None:
+                if not ffmpeg.poll() is None:
                     break
 
-            if ffmpeg.poll() == None:
+            if ffmpeg.poll() is None:
                 kill(ffmpeg)
                 return False, b"FFmpeg timed out"
         else:
