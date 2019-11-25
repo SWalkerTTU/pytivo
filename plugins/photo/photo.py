@@ -78,6 +78,34 @@ with open(iname, "rb") as iname_fh:
 JFIF_TAG = "\xff\xe0\x00\x10JFIF\x00\x01\x02\x00\x00\x01\x00\x01\x00\x00"
 
 
+def ImageFileFilter(f, file_type=""):
+    goodexts = (
+        ".jpg",
+        ".gif",
+        ".png",
+        ".bmp",
+        ".tif",
+        ".xbm",
+        ".xpm",
+        ".pgm",
+        ".pbm",
+        ".ppm",
+        ".pcx",
+        ".tga",
+        ".fpx",
+        ".ico",
+        ".pcd",
+        ".jpeg",
+        ".tiff",
+        ".nef",
+    )
+    return os.path.splitext(f)[1].lower() in goodexts
+
+
+def send_jpeg(handler, data):
+    handler.send_fixed(data, "image/jpeg")
+
+
 class SortList:
     def __init__(self, files):
         self.files = files
@@ -93,36 +121,37 @@ class SortList:
         self.lock.release()
 
 
+class LockedLRUCache(LRUCache):
+    def __init__(self, num):
+        LRUCache.__init__(self, num)
+        self.lock = threading.RLock()
+
+    def acquire(self, blocking=1):
+        return self.lock.acquire(blocking)
+
+    def release(self):
+        self.lock.release()
+
+    def __setitem__(self, key, obj):
+        self.acquire()
+        try:
+            LRUCache.__setitem__(self, key, obj)
+        finally:
+            self.release()
+
+    def __getitem__(self, key):
+        item = None
+        self.acquire()
+        try:
+            item = LRUCache.__getitem__(self, key)
+        finally:
+            self.release()
+        return item
+
+
 class Photo(Plugin):
 
     CONTENT_TYPE = "x-container/tivo-photos"
-
-    class LockedLRUCache(LRUCache):
-        def __init__(self, num):
-            LRUCache.__init__(self, num)
-            self.lock = threading.RLock()
-
-        def acquire(self, blocking=1):
-            return self.lock.acquire(blocking)
-
-        def release(self):
-            self.lock.release()
-
-        def __setitem__(self, key, obj):
-            self.acquire()
-            try:
-                LRUCache.__setitem__(self, key, obj)
-            finally:
-                self.release()
-
-        def __getitem__(self, key):
-            item = None
-            self.acquire()
-            try:
-                item = LRUCache.__getitem__(self, key)
-            finally:
-                self.release()
-            return item
 
     media_data_cache = LockedLRUCache(300)  # info and thumbnails
     recurse_cache = LockedLRUCache(5)  # recursive directory lists
@@ -347,9 +376,6 @@ class Photo(Plugin):
         return True, output
 
     def send_file(self, handler, path, query):
-        def send_jpeg(data):
-            handler.send_fixed(data, "image/jpeg")
-
         if "Format" in query and query["Format"][0] != "image/jpeg":
             handler.send_error(415)
             return
@@ -378,7 +404,7 @@ class Photo(Plugin):
 
         # Return saved thumbnail?
         if attrs and "thumb" in attrs and 0 < width < 100 and 0 < height < 100:
-            send_jpeg(attrs["thumb"])
+            send_jpeg(handler, attrs["thumb"])
             return
 
         # Requested pixel shape
@@ -398,10 +424,26 @@ class Photo(Plugin):
                 attrs["thumb"] = result
 
             # Send it
-            send_jpeg(result)
+            send_jpeg(handler, result)
         else:
             handler.server.logger.error(result)
             handler.send_error(404)
+
+    def media_data(self, f):
+        if f.name in self.media_data_cache:
+            return self.media_data_cache[f.name]
+
+        item = {}
+        item["path"] = f.name
+        item["part_path"] = f.name.replace(local_base_path, "", 1)
+        item["name"] = os.path.basename(f.name)
+        item["is_dir"] = f.isdir
+        item["rotation"] = 0
+        item["cdate"] = "%#x" % int(f.cdate)
+        item["mdate"] = "%#x" % int(f.mdate)
+
+        self.media_data_cache[f.name] = item
+        return item
 
     def QueryContainer(self, handler, query):
 
@@ -418,50 +460,11 @@ class Photo(Plugin):
             handler.send_error(404)
             return
 
-        def ImageFileFilter(f, file_type=""):
-            goodexts = (
-                ".jpg",
-                ".gif",
-                ".png",
-                ".bmp",
-                ".tif",
-                ".xbm",
-                ".xpm",
-                ".pgm",
-                ".pbm",
-                ".ppm",
-                ".pcx",
-                ".tga",
-                ".fpx",
-                ".ico",
-                ".pcd",
-                ".jpeg",
-                ".tiff",
-                ".nef",
-            )
-            return os.path.splitext(f)[1].lower() in goodexts
-
-        def media_data(f):
-            if f.name in self.media_data_cache:
-                return self.media_data_cache[f.name]
-
-            item = {}
-            item["path"] = f.name
-            item["part_path"] = f.name.replace(local_base_path, "", 1)
-            item["name"] = os.path.basename(f.name)
-            item["is_dir"] = f.isdir
-            item["rotation"] = 0
-            item["cdate"] = "%#x" % int(f.cdate)
-            item["mdate"] = "%#x" % int(f.mdate)
-
-            self.media_data_cache[f.name] = item
-            return item
-
         t = Template(PHOTO_TEMPLATE)
         t.name = query["Container"][0]
         t.container = handler.cname
         t.files, t.total, t.start = self.get_files(handler, query, ImageFileFilter)
-        t.files = list(map(media_data, t.files))
+        t.files = list(map(self.media_data, t.files))
         t.quote = quote
         t.escape = escape
 
@@ -488,21 +491,6 @@ class Photo(Plugin):
         force_alpha: bool = False,
         allow_recurse: bool = True,
     ) -> Tuple[List[Any], int, int]:
-        def name_sort(x, y):
-            return cmp(x.name, y.name)
-
-        def cdate_sort(x, y):
-            return cmp(x.cdate, y.cdate)
-
-        def mdate_sort(x, y):
-            return cmp(x.mdate, y.mdate)
-
-        def dir_sort(x, y):
-            if x.isdir == y.isdir:
-                return sortfunc(x, y)
-            else:
-                return y.isdir - x.isdir
-
         path = self.get_local_path(handler, query)
 
         # Build the list
@@ -566,15 +554,16 @@ class Photo(Plugin):
                         handler.server.logger.warning("Start not found: " + start)
             else:
                 if "Type" in sortby:
-                    filelist.files.sort(dir_sort)
+                    # secondary by ascending name
+                    filelist.files.sort(key=lambda x: x.name)
+                    # primary by descending isdir
+                    filelist.files.sort(key=lambda x: x.isdir, reverse=True)
+                elif "CaptureDate" in sortby:
+                    filelist.files.sort(key=lambda x: x.cdate)
+                elif "LastChangeDate" in sortby:
+                    filelist.files.sort(key=lambda x: x.mdate)
                 else:
-                    if "CaptureDate" in sortby:
-                        sortfunc = cdate_sort
-                    elif "LastChangeDate" in sortby:
-                        sortfunc = mdate_sort
-                    else:
-                        sortfunc = name_sort
-                    filelist.files.sort(sortfunc)
+                    filelist.files.sort(key=lambda x: x.name)
 
             filelist.sortby = sortby
             filelist.unsorted = False
