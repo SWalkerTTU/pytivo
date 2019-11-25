@@ -18,7 +18,7 @@ from Cheetah.Template import Template  # type: ignore
 
 from lrucache import LRUCache
 import config
-from plugin import Plugin, quote, unquote, FileData, SortList, FileDataLike
+from plugin import Plugin, quote, unquote, FileData, SortList
 from plugins.video.transcode import kill
 
 if TYPE_CHECKING:
