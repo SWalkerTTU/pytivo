@@ -503,7 +503,9 @@ class Music(Plugin):
                     del rc[p]
 
         if not filelist:
-            filelist = SortList[FileDataMusic](build_recursive_list(path, recurse))
+            filelist = SortList[FileDataMusic](
+                build_recursive_list(path, recurse, filterFunction, file_type)
+            )
 
             if recurse:
                 rc[path] = filelist
