@@ -35,7 +35,7 @@ import time
 from typing import TYPE_CHECKING, Optional, List, Any, Dict, Callable, Tuple
 import unicodedata
 import urllib.request, urllib.parse, urllib.error
-from io import StringIO
+from io import BytesIO
 from xml.sax.saxutils import escape
 
 use_pil = True
@@ -113,36 +113,36 @@ def send_jpeg(handler: "TivoHTTPHandler", data: bytes) -> None:
 
 
 class SortListLock(SortList):
-    def __init__(self, files: List[FileData]):
+    def __init__(self, files: List[FileData]) -> None:
         super().__init__(files)
         self.lock = threading.RLock()
 
-    def acquire(self, blocking=1):
+    def acquire(self, blocking: bool = True) -> bool:
         return self.lock.acquire(blocking)
 
-    def release(self):
+    def release(self) -> None:
         self.lock.release()
 
 
 class LockedLRUCache(LRUCache):
-    def __init__(self, num):
+    def __init__(self, num: int) -> None:
         LRUCache.__init__(self, num)
         self.lock = threading.RLock()
 
-    def acquire(self, blocking=1):
+    def acquire(self, blocking: bool = True) -> bool:
         return self.lock.acquire(blocking)
 
-    def release(self):
+    def release(self) -> None:
         self.lock.release()
 
-    def __setitem__(self, key, obj):
+    def __setitem__(self, key: str, obj: Any):
         self.acquire()
         try:
             LRUCache.__setitem__(self, key, obj)
         finally:
             self.release()
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         item = None
         self.acquire()
         try:
@@ -160,7 +160,9 @@ class Photo(Plugin):
     recurse_cache = LockedLRUCache(5)  # recursive directory lists
     dir_cache = LockedLRUCache(10)  # non-recursive lists
 
-    def new_size(self, oldw, oldh, width, height, pshape):
+    def new_size(
+        self, oldw: int, oldh: int, width: int, height: int, pshape: str
+    ) -> Tuple[int, int]:
         pixw, pixh = [int(x) for x in pshape.split(":")]
 
         if not width:
@@ -226,13 +228,16 @@ class Photo(Plugin):
         try:
             pic = Image.open(str(path, "utf-8"))
         except Exception as msg:
-            return False, "Could not open %s -- %s" % (path, msg)
+            return False, ("Could not open %s -- %s" % (path, msg)).encode()
 
         # Set draft mode
         try:
             pic.draft("RGB", (width, height))
         except Exception as msg:
-            return False, "Failed to set draft mode for %s -- %s" % (path, msg)
+            return (
+                False,
+                ("Failed to set draft mode for %s -- %s" % (path, msg)).encode(),
+            )
 
         # Read Exif data if possible
         if "exif" in pic.info:
@@ -243,14 +248,14 @@ class Photo(Plugin):
             if rot:
                 pic = pic.rotate(rot)
         except Exception as msg:
-            return False, "Rotate failed on %s -- %s" % (path, msg)
+            return False, ("Rotate failed on %s -- %s" % (path, msg)).encode()
 
         # De-palletize
         try:
             if pic.mode not in ("RGB", "L"):
                 pic = pic.convert("RGB")
         except Exception as msg:
-            return False, "Palette conversion failed on %s -- %s" % (path, msg)
+            return False, ("Palette conversion failed on %s -- %s" % (path, msg)).encode()
 
         # Old size
         oldw, oldh = pic.size
@@ -260,16 +265,16 @@ class Photo(Plugin):
         try:
             pic = pic.resize((width, height), Image.ANTIALIAS)
         except Exception as msg:
-            return False, "Resize failed on %s -- %s" % (path, msg)
+            return False, ("Resize failed on %s -- %s" % (path, msg)).encode()
 
         # Re-encode
         try:
-            out = StringIO()
+            out = BytesIO()
             pic.save(out, "JPEG", quality=85)
             encoded = out.getvalue()
             out.close()
         except Exception as msg:
-            return False, "Encode failed on %s -- %s" % (path, msg)
+            return False, ("Encode failed on %s -- %s" % (path, msg)).encode()
 
         return True, encoded
 
