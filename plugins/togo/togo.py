@@ -161,6 +161,9 @@ class ToGo(Plugin):
             attrs = config.tivos[tsn]
             tivo_name = attrs.get("name", tivoIP)
             tivo_mak = config.get_tsn("tivo_mak", tsn)
+            if tivo_mak is None:
+                handler.redir("Unable to find Tivo.", 10)
+                return
 
             protocol = attrs.get("protocol", "https")
             ip_port = "%s:%d" % (tivoIP, attrs.get("port", 443))
@@ -297,25 +300,25 @@ class ToGo(Plugin):
 
         parse_url = urllib.parse.urlparse(url)
 
-        name = str(unquote(parse_url[2]), "utf-8").split("/")[-1].split(".")
+        name_list = unquote(parse_url[2]).split("/")[-1].split(".")
         try:
             id = unquote(parse_url[4]).split("id=")[1]
-            name.insert(-1, " - " + id)
+            name_list.insert(-1, " - " + id)
         except:
             pass
         ts = STATUS[url]["ts_format"]
         if STATUS[url]["decode"]:
             if ts:
-                name[-1] = "ts"
+                name_list[-1] = "ts"
             else:
-                name[-1] = "mpg"
+                name_list[-1] = "mpg"
         else:
             if ts:
-                name.insert(-1, " (TS)")
+                name_list.insert(-1, " (TS)")
             else:
-                name.insert(-1, " (PS)")
-        name.insert(-1, ".")
-        name = "".join(name)
+                name_list.insert(-1, " (PS)")
+        name_list.insert(-1, ".")
+        name: str = "".join(name)
         for ch in BADCHAR:
             name = name.replace(ch, BADCHAR[ch])
         outfile = os.path.join(togo_path, name)
@@ -324,7 +327,7 @@ class ToGo(Plugin):
             meta = BASIC_META[url]
             try:
                 handle = self.tivo_open(DETAILS_URLS[url])
-                meta.update(metadata.from_details(handle.read()))
+                meta.update(metadata.from_details(handle.read().decode("utf-8")))
                 handle.close()
             except:
                 pass
@@ -351,11 +354,13 @@ class ToGo(Plugin):
         )
 
         if STATUS[url]["decode"]:
-            fname = outfile
-            if MSWINDOWS:
-                fname = fname.encode("cp1252")
             tivodecode_path = config.get_bin("tivodecode")
-            tcmd = [tivodecode_path, "-m", mak, "-o", fname, "-"]
+            if tivodecode_path is None:
+                STATUS[url]["running"] = False
+                STATUS[url]["error"] = "Can't find binary 'tivodecode'."
+                return
+
+            tcmd = [tivodecode_path, "-m", mak, "-o", outfile, "-"]
             tivodecode = subprocess.Popen(
                 tcmd, stdin=subprocess.PIPE, bufsize=(512 * 1024)
             )
@@ -423,7 +428,7 @@ class ToGo(Plugin):
         togo_path = config.get_server("togo_path", "")
         for name, data in config.getShares():
             if togo_path == name:
-                togo_path = data.get("path")
+                togo_path = str(data.get("path"))
         if togo_path:
             tivoIP = query["TiVo"][0]
             tsn = config.tivos_by_ip(tivoIP)
@@ -455,7 +460,7 @@ class ToGo(Plugin):
                     '[%s] Queued "%s" for transfer to %s'
                     % (time.strftime("%d/%b/%Y %H:%M:%S"), unquote(theurl), togo_path)
                 )
-            urlstring = "<br>".join([str(unquote(x), "utf-8") for x in urls])
+            urlstring = "<br>".join([unquote(x) for x in urls])
             message = TRANS_QUEUE % (urlstring, togo_path)
         else:
             message = MISSING
