@@ -310,10 +310,10 @@ class Music(Plugin):
             # wait 10 sec if ffmpeg is not back give up
             for i in range(200):
                 time.sleep(0.05)
-                if not ffmpeg.poll() == None:
+                if ffmpeg.poll() is not None:
                     break
 
-            if ffmpeg.poll() != None:
+            if ffmpeg.poll() is not None:
                 output = ffmpeg.stderr.read()
                 d = durre(output.decode("utf-8"))
                 if d:
