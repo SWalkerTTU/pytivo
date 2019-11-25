@@ -387,37 +387,37 @@ def select_format(tsn: str, mime: str) -> List[str]:
     return ["-f", fmt, "-"]
 
 
-def pad_TB(TIVO_WIDTH, TIVO_HEIGHT, multiplier, vInfo):
-    endHeight = int(((TIVO_WIDTH * vInfo["vHeight"]) / vInfo["vWidth"]) * multiplier)
+def pad_TB(tivo_width, tivo_height, multiplier, vInfo):
+    endHeight = int(((tivo_width * vInfo["vHeight"]) / vInfo["vWidth"]) * multiplier)
     if endHeight % 2:
         endHeight -= 1
-    topPadding = (TIVO_HEIGHT - endHeight) / 2
+    topPadding = (tivo_height - endHeight) / 2
     if topPadding % 2:
         topPadding -= 1
     return [
         "-vf",
         "scale=%d:%d,pad=%d:%d:0:%d"
-        % (TIVO_WIDTH, endHeight, TIVO_WIDTH, TIVO_HEIGHT, topPadding),
+        % (tivo_width, endHeight, tivo_width, tivo_height, topPadding),
     ]
 
 
-def pad_LR(TIVO_WIDTH, TIVO_HEIGHT, multiplier, vInfo):
-    endWidth = int((TIVO_HEIGHT * vInfo["vWidth"]) / (vInfo["vHeight"] * multiplier))
+def pad_LR(tivo_width, tivo_height, multiplier, vInfo):
+    endWidth = int((tivo_height * vInfo["vWidth"]) / (vInfo["vHeight"] * multiplier))
     if endWidth % 2:
         endWidth -= 1
-    leftPadding = (TIVO_WIDTH - endWidth) / 2
+    leftPadding = (tivo_width - endWidth) / 2
     if leftPadding % 2:
         leftPadding -= 1
     return [
         "-vf",
         "scale=%d:%d,pad=%d:%d:%d:0"
-        % (endWidth, TIVO_HEIGHT, TIVO_WIDTH, TIVO_HEIGHT, leftPadding),
+        % (endWidth, tivo_height, tivo_width, tivo_height, leftPadding),
     ]
 
 
 def select_aspect(inFile: str, tsn: str = ""):
-    TIVO_WIDTH = config.getTivoWidth(tsn)
-    TIVO_HEIGHT = config.getTivoHeight(tsn)
+    tivo_width = config.getTivoWidth(tsn)
+    tivo_height = config.getTivoHeight(tsn)
 
     vInfo = video_info(inFile)
 
@@ -434,10 +434,10 @@ def select_aspect(inFile: str, tsn: str = ""):
     if optres:
         optHeight = config.nearestTivoHeight(vInfo["vHeight"])
         optWidth = config.nearestTivoWidth(vInfo["vWidth"])
-        if optHeight < TIVO_HEIGHT:
-            TIVO_HEIGHT = optHeight
-        if optWidth < TIVO_WIDTH:
-            TIVO_WIDTH = optWidth
+        if optHeight < tivo_height:
+            tivo_height = optHeight
+        if optWidth < tivo_width:
+            tivo_width = optWidth
 
     if vInfo.get("par2"):
         par2 = vInfo["par2"]
@@ -450,7 +450,7 @@ def select_aspect(inFile: str, tsn: str = ""):
     LOGGER.debug(
         (
             "File=%s vCodec=%s vWidth=%s vHeight=%s vFps=%s millisecs=%s "
-            + "TIVO_HEIGHT=%s TIVO_WIDTH=%s"
+            + "tivo_height=%s tivo_width=%s"
         )
         % (
             inFile,
@@ -459,8 +459,8 @@ def select_aspect(inFile: str, tsn: str = ""):
             vInfo["vHeight"],
             vInfo["vFps"],
             vInfo["millisecs"],
-            TIVO_HEIGHT,
-            TIVO_WIDTH,
+            tivo_height,
+            tivo_width,
         )
     )
 
@@ -483,7 +483,7 @@ def select_aspect(inFile: str, tsn: str = ""):
                     % (math.ceil(vInfo["vWidth"] * npar / 2.0) * 2, vInfo["vHeight"]),
                 ]
 
-        if vInfo["vHeight"] <= TIVO_HEIGHT:
+        if vInfo["vHeight"] <= tivo_height:
             # pass all resolutions to S3, except heights greater than
             # conf height
             return []
@@ -495,7 +495,7 @@ def select_aspect(inFile: str, tsn: str = ""):
 
     if (rwidth, rheight) in [(1, 1)] and vInfo["par1"] == "8:9":
         LOGGER.debug("File + PAR is within 4:3.")
-        return ["-aspect", "4:3", "-s", "%sx%s" % (TIVO_WIDTH, TIVO_HEIGHT)]
+        return ["-aspect", "4:3", "-s", "%sx%s" % (tivo_width, tivo_height)]
 
     elif (rwidth, rheight) in [
         (4, 3),
@@ -507,7 +507,7 @@ def select_aspect(inFile: str, tsn: str = ""):
         (59, 54),
     ] or vInfo["dar1"] == "4:3":
         LOGGER.debug("File is within 4:3 list.")
-        return ["-aspect", "4:3", "-s", "%sx%s" % (TIVO_WIDTH, TIVO_HEIGHT)]
+        return ["-aspect", "4:3", "-s", "%sx%s" % (tivo_width, tivo_height)]
 
     elif (
         (rwidth, rheight) in [(16, 9), (20, 11), (40, 33), (118, 81), (59, 27)]
@@ -519,13 +519,13 @@ def select_aspect(inFile: str, tsn: str = ""):
             aspect = "4:3"
         else:
             aspect = "16:9"
-        return ["-aspect", aspect, "-s", "%sx%s" % (TIVO_WIDTH, TIVO_HEIGHT)]
+        return ["-aspect", aspect, "-s", "%sx%s" % (tivo_width, tivo_height)]
 
     else:
         settings = ["-aspect"]
 
-        multiplier16by9 = (16.0 * TIVO_HEIGHT) / (9.0 * TIVO_WIDTH) / par2
-        multiplier4by3 = (4.0 * TIVO_HEIGHT) / (3.0 * TIVO_WIDTH) / par2
+        multiplier16by9 = (16.0 * tivo_height) / (9.0 * tivo_width) / par2
+        multiplier4by3 = (4.0 * tivo_height) / (3.0 * tivo_width) / par2
         ratio = vInfo["vWidth"] * 100 * par2 / vInfo["vHeight"]
         LOGGER.debug(
             "par2=%.3f ratio=%.3f mult4by3=%.3f" % (par2, ratio, multiplier4by3)
@@ -545,7 +545,7 @@ def select_aspect(inFile: str, tsn: str = ""):
                     settings.append("16:9")
 
                 if ratio > 177:  # too short needs padding top and bottom
-                    settings += pad_TB(TIVO_WIDTH, TIVO_HEIGHT, multiplier16by9, vInfo)
+                    settings += pad_TB(tivo_width, tivo_height, multiplier16by9, vInfo)
                     LOGGER.debug(
                         (
                             "16:9 aspect allowed, file is wider "
@@ -555,7 +555,7 @@ def select_aspect(inFile: str, tsn: str = ""):
                     )
 
                 else:  # too skinny needs padding on left and right.
-                    settings += pad_LR(TIVO_WIDTH, TIVO_HEIGHT, multiplier16by9, vInfo)
+                    settings += pad_LR(tivo_width, tivo_height, multiplier16by9, vInfo)
                     LOGGER.debug(
                         (
                             "16:9 aspect allowed, file is narrower "
@@ -571,7 +571,7 @@ def select_aspect(inFile: str, tsn: str = ""):
                 else:
                     settings.append("4:3")
                     multiplier = multiplier4by3
-                settings += pad_TB(TIVO_WIDTH, TIVO_HEIGHT, multiplier, vInfo)
+                settings += pad_TB(tivo_width, tivo_height, multiplier, vInfo)
                 LOGGER.debug(
                     ("File is wider than 4:3 padding " + "top and bottom\n%s")
                     % " ".join(settings)
@@ -583,7 +583,7 @@ def select_aspect(inFile: str, tsn: str = ""):
 
         else:
             settings.append("4:3")
-            settings += pad_LR(TIVO_WIDTH, TIVO_HEIGHT, multiplier4by3, vInfo)
+            settings += pad_LR(tivo_width, tivo_height, multiplier4by3, vInfo)
             LOGGER.debug(
                 "File is taller than 4:3 padding left and right\n%s"
                 % " ".join(settings)
