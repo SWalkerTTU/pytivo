@@ -30,6 +30,7 @@ def no_anchor(handler: "TivoHTTPHandler", anchor: str) -> None:
     handler.server.logger.warning("Anchor not found: " + anchor)
 
 
+# TODO 20191125 Maybe omit file_type if no filter functions use it?
 def build_recursive_list(
     path: str,
     recurse: bool = True,

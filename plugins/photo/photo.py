@@ -50,7 +50,7 @@ except ImportError:
 import config
 from Cheetah.Template import Template  # type: ignore
 from lrucache import LRUCache
-from plugin import Plugin, quote, unquote
+from plugin import Plugin, quote, unquote, FileData, build_recursive_list
 from plugins.video.transcode import kill
 
 SCRIPTDIR = os.path.dirname(__file__)
@@ -76,6 +76,21 @@ with open(iname, "rb") as iname_fh:
     ITEM_TEMPLATE = iname_fh.read()
 
 JFIF_TAG = "\xff\xe0\x00\x10JFIF\x00\x01\x02\x00\x00\x01\x00\x01\x00\x00"
+
+
+class SortList:
+    def __init__(self, files):
+        self.files = files
+        self.unsorted = True
+        self.sortby = None
+        self.last_start = 0
+        self.lock = threading.RLock()
+
+    def acquire(self, blocking=1):
+        return self.lock.acquire(blocking)
+
+    def release(self):
+        self.lock.release()
 
 
 class Photo(Plugin):
@@ -403,7 +418,7 @@ class Photo(Plugin):
             handler.send_error(404)
             return
 
-        def ImageFileFilter(f):
+        def ImageFileFilter(f, file_type=""):
             goodexts = (
                 ".jpg",
                 ".gif",
@@ -465,51 +480,14 @@ class Photo(Plugin):
         else:
             handler.send_error(404)
 
-    def get_files(self, handler, query, filterFunction):
-        class FileData:
-            def __init__(self, name, isdir):
-                self.name = name
-                self.isdir = isdir
-                st = os.stat(str(name, "utf-8"))
-                self.cdate = st.st_ctime
-                self.mdate = st.st_mtime
-
-        class SortList:
-            def __init__(self, files):
-                self.files = files
-                self.unsorted = True
-                self.sortby = None
-                self.last_start = 0
-                self.lock = threading.RLock()
-
-            def acquire(self, blocking=1):
-                return self.lock.acquire(blocking)
-
-            def release(self):
-                self.lock.release()
-
-        def build_recursive_list(path, recurse=True):
-            files = []
-            path = str(path, "utf-8")
-            try:
-                for f in os.listdir(path):
-                    if f.startswith("."):
-                        continue
-                    f = os.path.join(path, f)
-                    isdir = os.path.isdir(f)
-                    if sys.platform == "darwin":
-                        f = unicodedata.normalize("NFC", f)
-                    f = f.encode("utf-8")
-                    if recurse and isdir:
-                        files.extend(build_recursive_list(f))
-                    else:
-                        if isdir or filterFunction(f):
-                            files.append(FileData(f, isdir))
-            except:
-                pass
-
-            return files
-
+    def get_files(
+        self,
+        handler: "TivoHTTPHandler",
+        query: Dict[str, Any],
+        filterFunction: Optional[Callable] = None,
+        force_alpha: bool = False,
+        allow_recurse: bool = True,
+    ) -> Tuple[List[Any], int, int]:
         def name_sort(x, y):
             return cmp(x.name, y.name)
 
@@ -545,7 +523,7 @@ class Photo(Plugin):
                     del rc[p]
 
         if not filelist:
-            filelist = SortList(build_recursive_list(path, recurse))
+            filelist = SortList(build_recursive_list(path, recurse, filterFunction, ""))
 
             if recurse:
                 rc[path] = filelist
@@ -587,16 +565,15 @@ class Photo(Plugin):
                     except ValueError:
                         handler.server.logger.warning("Start not found: " + start)
             else:
-                if "CaptureDate" in sortby:
-                    sortfunc = cdate_sort
-                elif "LastChangeDate" in sortby:
-                    sortfunc = mdate_sort
-                else:
-                    sortfunc = name_sort
-
                 if "Type" in sortby:
                     filelist.files.sort(dir_sort)
                 else:
+                    if "CaptureDate" in sortby:
+                        sortfunc = cdate_sort
+                    elif "LastChangeDate" in sortby:
+                        sortfunc = mdate_sort
+                    else:
+                        sortfunc = name_sort
                     filelist.files.sort(sortfunc)
 
             filelist.sortby = sortby
