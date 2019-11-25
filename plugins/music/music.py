@@ -18,7 +18,7 @@ from Cheetah.Template import Template  # type: ignore
 
 from lrucache import LRUCache
 import config
-from plugin import Plugin, quote, unquote, FileData, SortList
+from plugin import Plugin, quote, unquote, FileData, SortList, FileDataLike
 from plugins.video.transcode import kill
 
 if TYPE_CHECKING:
@@ -466,6 +466,8 @@ class Music(Plugin):
 
         return playlist
 
+    # Returns List[Any] but really we want here List[FileDataMusic] and in
+    #   parent List[FileData]
     def get_files(
         self,
         handler: "TivoHTTPHandler",
@@ -473,7 +475,7 @@ class Music(Plugin):
         filterFunction: Optional[Callable] = None,
         force_alpha: bool = False,  # unused in this plugin
         allow_recurse: bool = False,  # unused in this plugin
-    ) -> Tuple[List[FileDataMusic], int, int]:
+    ) -> Tuple[List[Any], int, int]:
         path = self.get_local_path(handler, query)
 
         file_type = query.get("Filter", [""])[0]

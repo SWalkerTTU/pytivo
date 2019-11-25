@@ -214,6 +214,8 @@ class Plugin:
 
         return files, totalFiles, index
 
+    # Returns List[Any] but really we want here List[FileData] and in
+    #   children parent List[FileData*]
     def get_files(
         self,
         handler: "TivoHTTPHandler",
@@ -221,7 +223,7 @@ class Plugin:
         filterFunction: Optional[Callable] = None,
         force_alpha: bool = False,
         allow_recurse: bool = True,
-    ) -> Tuple[List[FileData], int, int]:
+    ) -> Tuple[List[Any], int, int]:
 
         subcname = query["Container"][0]
         path = self.get_local_path(handler, query)
