@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 import time
-from typing import TYPE_CHECKING, Dict, Any, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, Any, List, Optional, Union, Callable, Tuple
 import unicodedata
 import urllib.request, urllib.parse, urllib.error
 from xml.sax.saxutils import escape
@@ -93,6 +93,44 @@ with open(iname, "rb") as iname_fh:
 # mswindows = sys.platform == "win32"
 # if mswindows:
 #    patchSubprocess()
+
+
+def get_tag(tagname, d):
+    for tag in [tagname] + TAGNAMES[tagname]:
+        try:
+            if tag in d:
+                value = d[tag][0]
+                if type(value) not in [str, str]:
+                    value = str(value)
+                return value
+        except:
+            pass
+    return ""
+
+
+def build_recursive_list(
+    path: str,
+    recurse: bool = True,
+    filterFunction: Optional[Callable] = None,
+    file_type: Optional[List[str]] = None,
+) -> List[FileDataMusic]:
+    files = []
+    try:
+        for f in os.listdir(path):
+            if f.startswith("."):
+                continue
+            f = os.path.join(path, f)
+            isdir = os.path.isdir(f)
+            if recurse and isdir:
+                files.extend(
+                    build_recursive_list(f, recurse, filterFunction, file_type)
+                )
+            else:
+                if filterFunction is None or filterFunction(f, file_type):
+                    files.append(FileDataMusic(f, isdir))
+    except:
+        pass
+    return files
 
 
 class FileDataMusic(FileData):
@@ -248,18 +286,6 @@ class Music(Plugin):
                     item["Duration"] = int(audioFile.info.length * 1000)
 
                 # Grab our other tags, if present
-                def get_tag(tagname, d):
-                    for tag in [tagname] + TAGNAMES[tagname]:
-                        try:
-                            if tag in d:
-                                value = d[tag][0]
-                                if type(value) not in [str, str]:
-                                    value = str(value)
-                                return value
-                        except:
-                            pass
-                    return ""
-
                 artist = get_tag("artist", audioFile)
                 title = get_tag("title", audioFile)
                 if artist == "Various Artists" and "/" in title:
@@ -290,7 +316,7 @@ class Music(Plugin):
 
             if ffmpeg.poll() != None:
                 output = ffmpeg.stderr.read()
-                d = durre(output)
+                d = durre(output.decode("utf-8"))
                 if d:
                     millisecs = (
                         int(d.group(1)) * 3600 + int(d.group(2)) * 60 + int(d.group(3))
@@ -333,7 +359,7 @@ class Music(Plugin):
         handler.send_xml(str(t))
 
     # this is a TivoConnect Command, so must be named this exactly
-    def QueryItem(self, handler, query):
+    def QueryItem(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
         uq = urllib.parse.unquote_plus
         splitpath = [x for x in uq(query["Url"][0]).split("/") if x]
         path = os.path.join(handler.container["path"], *splitpath[1:])
@@ -346,7 +372,7 @@ class Music(Plugin):
         else:
             handler.send_error(404)
 
-    def parse_playlist(self, list_name, recurse):
+    def parse_playlist(self, list_name: str, recurse: bool) -> List[FileDataMusic]:
 
         ext = os.path.splitext(list_name)[1].lower()
 
@@ -355,7 +381,7 @@ class Music(Plugin):
             list_name = list_name[url:]
             list_file = urllib.request.urlopen(list_name)
         except:
-            list_file = open(str(list_name, "utf-8"))
+            list_file = open(list_name)
             local_path = os.path.sep.join(list_name.split(os.path.sep)[:-1])
 
         if ext in (".m3u", ".pls"):
@@ -432,65 +458,37 @@ class Music(Plugin):
 
         if recurse:
             newlist = []
-            for i in playlist:
-                if i.isplay:
-                    newlist.extend(self.parse_playlist(i.name, recurse))
+            for fdata in playlist:
+                if fdata.isplay:
+                    newlist.extend(self.parse_playlist(fdata.name, recurse))
                 else:
-                    newlist.append(i)
+                    newlist.append(fdata)
 
             playlist = newlist
 
         return playlist
 
-    def get_files(self, handler, query, filterFunction=None):
-        def build_recursive_list(path, recurse=True):
-            files = []
-            path = str(path, "utf-8")
-            try:
-                for f in os.listdir(path):
-                    if f.startswith("."):
-                        continue
-                    f = os.path.join(path, f)
-                    isdir = os.path.isdir(f)
-                    if sys.platform == "darwin":
-                        f = unicodedata.normalize("NFC", f)
-                    f = f.encode("utf-8")
-                    if recurse and isdir:
-                        files.extend(build_recursive_list(f))
-                    else:
-                        fd = FileDataMusic(f, isdir)
-                        if isdir or filterFunction(f, file_type):
-                            files.append(fd)
-            except:
-                pass
-            return files
-
-        def dir_sort(x, y):
-            if x.isdir == y.isdir:
-                if x.isplay == y.isplay:
-                    return name_sort(x, y)
-                else:
-                    return y.isplay - x.isplay
-            else:
-                return y.isdir - x.isdir
-
-        def name_sort(x, y):
-            return cmp(x.name, y.name)
-
+    def get_files(
+        self,
+        handler: "TivoHTTPHandler",
+        query: Dict[str, Any],
+        filterFunction: Optional[Callable] = None,
+    ) -> Tuple[List[FileDataMusic], int, int]:
         path = self.get_local_path(handler, query)
 
         file_type = query.get("Filter", [""])[0]
 
         recurse = query.get("Recurse", ["No"])[0] == "Yes"
 
-        filelist = []
+        files: List[FileDataMusic] = []
+        filelist = SortList(files)
         rc = self.recurse_cache
         dc = self.dir_cache
         if recurse:
             if path in rc:
                 filelist = rc[path]
         else:
-            updated = os.path.getmtime(str(path, "utf-8"))
+            updated = os.path.getmtime(path)
             if path in dc and dc.mtime(path) >= updated:
                 filelist = dc[path]
             for p in rc:
@@ -538,7 +536,10 @@ class Music(Plugin):
                     except ValueError:
                         handler.server.logger.warning("Start not found: " + start)
             else:
-                filelist.files.sort(dir_sort)
+                # secondary by ascending name
+                filelist.files.sort(key=lambda x: x.name)
+                # primary by descending isdir
+                filelist.files.sort(key=lambda x: x.isdir, reverse=True)
 
             filelist.sortby = sortby
             filelist.unsorted = False
@@ -546,11 +547,11 @@ class Music(Plugin):
         files = filelist.files[:]
 
         # Trim the list
-        files, total, start = self.item_count(
+        files, total, start_item = self.item_count(
             handler, query, handler.cname, files, filelist.last_start
         )
-        filelist.last_start = start
-        return files, total, start
+        filelist.last_start = start_item
+        return files, total, start_item
 
     def get_playlist(self, handler, query):
         subcname = query["Container"][0]
