@@ -14,6 +14,8 @@ from typing import (
     Callable,
     Union,
     Type,
+    TypeVar,
+    Generic,
 )
 import urllib.request, urllib.parse, urllib.error
 from http.server import BaseHTTPRequestHandler
@@ -80,8 +82,11 @@ class FileData:
         self.size = st.st_size
 
 
-class SortList:
-    def __init__(self, files: List[FileData]) -> None:
+FileDataLike = TypeVar("FileDataLike", bound=FileData)
+
+
+class SortList(Generic[FileDataLike]):
+    def __init__(self, files: List[FileDataLike]) -> None:
         self.files = files
         self.unsorted = True
         self.sortby = None
@@ -106,7 +111,6 @@ def GetPlugin(name: str) -> Union["Plugin", Error]:
 
 
 class Plugin:
-
     random_lock = threading.Lock()
 
     CONTENT_TYPE = ""
@@ -155,9 +159,9 @@ class Plugin:
         handler: "TivoHTTPHandler",
         query: Dict[str, Any],
         cname: str,
-        files: List[FileData],
+        files: List[FileDataLike],
         last_start: int = 0,
-    ) -> Tuple[List[FileData], int, int]:
+    ) -> Tuple[List[FileDataLike], int, int]:
         """Return only the desired portion of the list, as specified by 
            ItemCount, AnchorItem and AnchorOffset. 'files' is
            a list of objects with a 'name' attribute.
@@ -226,7 +230,7 @@ class Plugin:
 
         recurse = allow_recurse and query.get("Recurse", ["No"])[0] == "Yes"
 
-        filelist = SortList([])
+        filelist = SortList[FileData]([])
         # TODO: use @functools.lru_cache instead (but mtime not supplied?)
         rc = self.recurse_cache
         # TODO: use @functools.lru_cache instead (but mtime not supplied?)
@@ -243,7 +247,7 @@ class Plugin:
                     del rc[p]
 
         if not filelist:
-            filelist = SortList(
+            filelist = SortList[FileData](
                 build_recursive_list(path, recurse, filterFunction, file_type)
             )
 

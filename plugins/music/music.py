@@ -18,7 +18,7 @@ from Cheetah.Template import Template  # type: ignore
 
 from lrucache import LRUCache
 import config
-from plugin import Plugin, quote, unquote, SortList, FileData
+from plugin import Plugin, quote, unquote, FileData, SortList
 from plugins.video.transcode import kill
 
 if TYPE_CHECKING:
@@ -142,9 +142,7 @@ class FileDataMusic(FileData):
 
 
 class Music(Plugin):
-
     CONTENT_TYPE = "x-container/tivo-music"
-
     AUDIO = "audio"
     DIRECTORY = "dir"
     PLAYLIST = "play"
@@ -473,6 +471,8 @@ class Music(Plugin):
         handler: "TivoHTTPHandler",
         query: Dict[str, Any],
         filterFunction: Optional[Callable] = None,
+        force_alpha: bool = False,  # unused in this plugin
+        allow_recurse: bool = False,  # unused in this plugin
     ) -> Tuple[List[FileDataMusic], int, int]:
         path = self.get_local_path(handler, query)
 
@@ -480,8 +480,7 @@ class Music(Plugin):
 
         recurse = query.get("Recurse", ["No"])[0] == "Yes"
 
-        files: List[FileDataMusic] = []
-        filelist = SortList(files)
+        filelist = SortList[FileDataMusic]([])
         rc = self.recurse_cache
         dc = self.dir_cache
         if recurse:
@@ -496,7 +495,7 @@ class Music(Plugin):
                     del rc[p]
 
         if not filelist:
-            filelist = SortList(build_recursive_list(path, recurse))
+            filelist = SortList[FileDataMusic](build_recursive_list(path, recurse))
 
             if recurse:
                 rc[path] = filelist
