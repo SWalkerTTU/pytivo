@@ -468,6 +468,11 @@ class Music(Plugin):
 
     # Returns List[Any] but really we want here List[FileDataMusic] and in
     #   parent List[FileData]
+    # TODO 20191125: We could make a generic function if we only accepted an
+    #   argument to define what FileDataLike is in this case.
+    #   We could return Tuple[List[FileDataLike], int, int] and
+    #   We could have a dummy argument with type Type[FileDataLike] and then
+    #       just pass in FileDataMusic to define the type inside the List?
     def get_files(
         self,
         handler: "TivoHTTPHandler",
@@ -554,7 +559,14 @@ class Music(Plugin):
         filelist.last_start = start_item
         return files, total, start_item
 
-    def get_playlist(self, handler, query):
+    # TODO 20191125: We could make a generic function if we only accepted an
+    #   argument to define what FileDataLike is in this case.
+    #   We could return Tuple[List[FileDataLike], int, int] and
+    #   We could have a dummy argument with type Type[FileDataLike] and then
+    #       just pass in FileDataMusic to define the type inside the List?
+    def get_playlist(
+        self, handler: "TivoHTTPHandler", query: Dict[str, Any]
+    ) -> Tuple[List[Any], int, int]:
         subcname = query["Container"][0]
 
         try:

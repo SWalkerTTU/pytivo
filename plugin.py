@@ -110,6 +110,9 @@ def GetPlugin(name: str) -> Union["Plugin", Error]:
         return Error()
 
 
+# TODO 20191125: We could define a Generic for the class that would take the
+#   value of FileData, or FileDataMusic, etc. depending on the plugin, and
+#   give proper types for the member methods?
 class Plugin:
     random_lock = threading.Lock()
 
@@ -216,6 +219,11 @@ class Plugin:
 
     # Returns List[Any] but really we want here List[FileData] and in
     #   children parent List[FileData*]
+    # TODO 20191125: We could make a generic function if we only accepted an
+    #   argument to define what FileDataLike is in this case.
+    #   We could return Tuple[List[FileDataLike], int, int] and
+    #   We could have a dummy argument with type Type[FileDataLike] and then
+    #       just pass in FileData to define the type inside the List?
     def get_files(
         self,
         handler: "TivoHTTPHandler",
