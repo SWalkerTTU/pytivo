@@ -32,7 +32,7 @@ import sys
 import tempfile
 import threading
 import time
-from typing import TYPE_CHECKING, Optional, List, Any, Dict, Callable, Tuple
+from typing import TYPE_CHECKING, Optional, List, Any, Dict, Callable, Tuple, Union
 import unicodedata
 import urllib.request, urllib.parse, urllib.error
 from io import BytesIO
@@ -182,7 +182,7 @@ class Photo(Plugin):
 
         return width, height
 
-    def parse_exif(self, exif, rot, attrs):
+    def parse_exif(self, exif, rot: int, attrs: Dict[str, Any]) -> int:
         # Capture date
         if attrs and not "odate" in attrs:
             date = exif_date(exif)
@@ -222,11 +222,17 @@ class Photo(Plugin):
         return rot
 
     def get_image_pil(
-        self, path, width, height, pshape, rot, attrs
+        self,
+        path: str,
+        width: int,
+        height: int,
+        pshape: str,
+        rot: int,
+        attrs: Dict[str, Any],
     ) -> Tuple[bool, bytes]:
         # Load
         try:
-            pic = Image.open(str(path, "utf-8"))
+            pic = Image.open(path)
         except Exception as msg:
             return False, ("Could not open %s -- %s" % (path, msg)).encode()
 
@@ -255,7 +261,10 @@ class Photo(Plugin):
             if pic.mode not in ("RGB", "L"):
                 pic = pic.convert("RGB")
         except Exception as msg:
-            return False, ("Palette conversion failed on %s -- %s" % (path, msg)).encode()
+            return (
+                False,
+                ("Palette conversion failed on %s -- %s" % (path, msg)).encode(),
+            )
 
         # Old size
         oldw, oldh = pic.size
@@ -278,7 +287,9 @@ class Photo(Plugin):
 
         return True, encoded
 
-    def get_size_ffmpeg(self, ffmpeg_path, fname):
+    def get_size_ffmpeg(
+        self, ffmpeg_path: str, fname: str
+    ) -> Tuple[bool, Union[Tuple[int, int], bytes]]:
         cmd = [ffmpeg_path, "-i", fname]
         # Windows and other OS buffer 4096 and ffmpeg can output more
         # than that.
@@ -297,7 +308,7 @@ class Photo(Plugin):
 
             if ffmpeg.poll() == None:
                 kill(ffmpeg)
-                return False, "FFmpeg timed out"
+                return False, b"FFmpeg timed out"
         else:
             ffmpeg.wait()
 
@@ -310,23 +321,27 @@ class Photo(Plugin):
             width = int(x.group(1))
             height = int(x.group(2))
         else:
-            return False, "Couldn't parse size"
+            return False, b"Couldn't parse size"
 
         return True, (width, height)
 
-    def get_image_ffmpeg(self, path, width, height, pshape, rot, attrs):
+    def get_image_ffmpeg(
+        self,
+        path: str,
+        width: int,
+        height: int,
+        pshape: str,
+        rot: int,
+        attrs: Dict[str, Any],
+    ) -> Tuple[bool, bytes]:
         ffmpeg_path = config.get_bin("ffmpeg")
         if not ffmpeg_path:
-            return False, "FFmpeg not found"
-
-        fname = str(path, "utf-8")
-        if sys.platform == "win32":
-            fname = fname.encode("cp1252")
+            return False, b"FFmpeg not found"
 
         if attrs and "size" in attrs:
             result = attrs["size"]
         else:
-            status, result = self.get_size_ffmpeg(ffmpeg_path, fname)
+            status, result = self.get_size_ffmpeg(ffmpeg_path, path)
             if not status:
                 return False, result
             if attrs:
@@ -358,7 +373,7 @@ class Photo(Plugin):
 
         filters += "scale=%d:%d" % (width, height)
 
-        cmd = [ffmpeg_path, "-i", fname, "-vf", filters, "-f", "mjpeg", "-"]
+        cmd = [ffmpeg_path, "-i", path, "-vf", filters, "-f", "mjpeg", "-"]
         jpeg_tmp = tempfile.TemporaryFile()
         ffmpeg = subprocess.Popen(cmd, stdout=jpeg_tmp, stdin=subprocess.PIPE)
 
@@ -372,7 +387,7 @@ class Photo(Plugin):
 
             if ffmpeg.poll() == None:
                 kill(ffmpeg)
-                return False, "FFmpeg timed out"
+                return False, b"FFmpeg timed out"
         else:
             ffmpeg.wait()
 
