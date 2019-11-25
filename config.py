@@ -21,7 +21,7 @@ configs_found: List[str]
 
 
 class Bdict(dict):
-    def getboolean(self, x):
+    def getboolean(self, x:Any) -> bool:
         return self.get(x, "False").lower() in ("1", "yes", "true", "on")
 
 
