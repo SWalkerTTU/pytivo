@@ -46,7 +46,7 @@ def build_recursive_list(
                     build_recursive_list(f, recurse, filterFunction, file_type)
                 )
             else:
-                if not filterFunction or filterFunction(f, file_type):
+                if filterFunction is None or filterFunction(f, file_type):
                     files.append(FileData(f, isdir))
     except:
         pass
