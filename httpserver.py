@@ -286,7 +286,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
             if client_ip.startswith(allowedip):
                 return True
 
-        self.send_fixed("Unauthorized.", "text/plain", 403)
+        self.send_fixed(b"Unauthorized.", "text/plain", 403)
         return False
 
     # TODO: typing for *args ??
@@ -296,38 +296,36 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
             % (self.address_string(), self.log_date_time_string(), format % args)
         )
 
-    # TODO: decide if page is str or bytes
     def send_fixed(
-        self, page: str, mime: str, code: int = 200, refresh: str = ""
+        self, data: bytes, mime: str, code: int = 200, refresh: str = ""
     ) -> None:
-        page_bytes = page.encode()
         squeeze = (
-            len(page_bytes) > 256
+            len(data) > 256
             and mime.startswith("text")
             and "gzip" in self.headers.get("Accept-Encoding", "")
         )
         if squeeze:
             out = BytesIO()
-            gzip.GzipFile(mode="wb", fileobj=out).write(page_bytes)
-            page_bytes = out.getvalue()
+            gzip.GzipFile(mode="wb", fileobj=out).write(data)
+            data = out.getvalue()
             out.close()
         self.send_response(code)
         self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", str(len(page_bytes)))
+        self.send_header("Content-Length", str(len(data)))
         if squeeze:
             self.send_header("Content-Encoding", "gzip")
         self.send_header("Expires", "0")
         if refresh:
             self.send_header("Refresh", refresh)
         self.end_headers()
-        self.wfile.write(page_bytes)
+        self.wfile.write(data)
         self.wfile.flush()
 
     def send_xml(self, page: str) -> None:
-        self.send_fixed(page, "text/xml")
+        self.send_fixed(page.encode(), "text/xml")
 
     def send_html(self, page: str, code: int = 200, refresh: str = "") -> None:
-        self.send_fixed(page, "text/html; charset=utf-8", code, refresh)
+        self.send_fixed(page.encode(), "text/html; charset=utf-8", code, refresh)
 
     def root_container(self) -> None:
         tsn = self.headers.get("TiVo_TCD_ID", "")
