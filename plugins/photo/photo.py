@@ -24,6 +24,7 @@
 # Version 0.2,  Dec. 8  -- thumbnail caching, faster thumbnails
 # Version 0.1,  Dec. 7, 2007
 
+from functools import partial
 import os
 import re
 import random
@@ -101,7 +102,7 @@ with open(tname, "rb") as tname_fh:
 with open(iname, "rb") as iname_fh:
     ITEM_TEMPLATE = iname_fh.read()
 
-JFIF_TAG = "\xff\xe0\x00\x10JFIF\x00\x01\x02\x00\x00\x01\x00\x01\x00\x00"
+JFIF_TAG = b"\xff\xe0\x00\x10JFIF\x00\x01\x02\x00\x00\x01\x00\x01\x00\x00"
 
 
 def ImageFileFilter(f: str, filter_type: Optional[str] = None) -> bool:
@@ -313,7 +314,7 @@ class Photo(Plugin):
             ffmpeg.wait()
 
         err_tmp.seek(0)
-        output = err_tmp.read()
+        output = err_tmp.read().decode()
         err_tmp.close()
 
         x = ffmpeg_size.search(output)
@@ -395,12 +396,14 @@ class Photo(Plugin):
         output = jpeg_tmp.read()
         jpeg_tmp.close()
 
-        if "JFIF" not in output[:10]:
+        if b"JFIF" not in output[:10]:
             output = output[:2] + JFIF_TAG + output[2:]
 
         return True, output
 
-    def send_file(self, handler, path, query):
+    def send_file(
+        self, handler: "TivoHTTPHandler", path: str, query: Dict[str, Any]
+    ) -> None:
         if "Format" in query and query["Format"][0] != "image/jpeg":
             handler.send_error(415)
             return
@@ -454,11 +457,11 @@ class Photo(Plugin):
             handler.server.logger.error(result)
             handler.send_error(404)
 
-    def media_data(self, f):
+    def media_data(self, f: FileData, local_base_path: str) -> Dict[str, Any]:
         if f.name in self.media_data_cache:
             return self.media_data_cache[f.name]
 
-        item = {}
+        item: Dict[str, Any] = {}
         item["path"] = f.name
         item["part_path"] = f.name.replace(local_base_path, "", 1)
         item["name"] = os.path.basename(f.name)
@@ -470,8 +473,7 @@ class Photo(Plugin):
         self.media_data_cache[f.name] = item
         return item
 
-    def QueryContainer(self, handler, query):
-
+    def QueryContainer(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
         # Reject a malformed request -- these attributes should only
         # appear in requests to send_file, but sometimes appear here
         badattrs = ("Rotation", "Width", "Height", "PixelShape")
@@ -489,13 +491,15 @@ class Photo(Plugin):
         t.name = query["Container"][0]
         t.container = handler.cname
         t.files, t.total, t.start = self.get_files(handler, query, ImageFileFilter)
-        t.files = list(map(self.media_data, t.files))
+        t.files = list(
+            map(partial(self.media_data, local_base_path=local_base_path), t.files)
+        )
         t.quote = quote
         t.escape = escape
 
         handler.send_xml(str(t))
 
-    def QueryItem(self, handler, query):
+    def QueryItem(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
         uq = urllib.parse.unquote_plus
         splitpath = [x for x in uq(query["Url"][0]).split("/") if x]
         path = os.path.join(handler.container["path"], *splitpath[1:])

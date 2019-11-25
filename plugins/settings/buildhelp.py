@@ -1,11 +1,12 @@
 import os
+from typing import Dict, List
 
 SCRIPTDIR = os.path.dirname(__file__)
 
 ## Build initial help list
-help_list = {}
+help_list: Dict[str, List[str]] = {}
 title = ""
-settings_known = {}
+settings_known: Dict[str, List[str]] = {}
 mode = {}
 options = {}
 default = {}
@@ -55,9 +56,9 @@ plugins = [
 options["type"] = plugins
 
 
-def gethelp():
+def gethelp() -> Dict[str, List[str]]:
     return help_list
 
 
-def getknown(section):
+def getknown(section: str) -> List[str]:
     return settings_known[section]

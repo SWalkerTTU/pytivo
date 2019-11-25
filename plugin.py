@@ -80,6 +80,7 @@ class FileData:
         self.isdir = isdir
         st = os.stat(name)
         self.mdate = st.st_mtime
+        self.cdate = st.st_ctime
         self.size = st.st_size
 
 
