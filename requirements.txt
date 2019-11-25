@@ -1,3 +1,4 @@
 mutagen
 Cheetah3
 zeroconf
+Pillow
