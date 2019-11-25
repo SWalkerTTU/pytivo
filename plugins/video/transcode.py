@@ -83,13 +83,14 @@ def transcode(
     if isQuery:
         return settings
 
-    ffmpeg_path = config.get_bin("ffmpeg")
     # TODO 20191125: fail with error if can't find ffmpeg
+    ffmpeg_path = config.get_bin("ffmpeg")
 
     if inFile[-5:].lower() == ".tivo":
-        tivodecode_path = config.get_bin("tivodecode")
         # TODO 20191125: fail with error if can't find tivodecode
-        tivo_mak = config.get_server("tivo_mak")
+        tivodecode_path = config.get_bin("tivodecode")
+        # TODO 20191125: fial if can't get tivo_mak
+        tivo_mak = config.get_server("tivo_mak", "")
         tcmd = [tivodecode_path, "-m", tivo_mak, inFile]
         tivodecode = subprocess.Popen(
             tcmd, stdout=subprocess.PIPE, bufsize=(512 * 1024)
