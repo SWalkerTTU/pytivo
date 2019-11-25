@@ -35,7 +35,7 @@ def build_recursive_list(
     path: str,
     recurse: bool = True,
     filterFunction: Optional[Callable] = None,
-    file_type: Optional[List[str]] = None,
+    file_type: Optional[str] = None,
 ) -> List[FileData]:
     files = []
     try:
