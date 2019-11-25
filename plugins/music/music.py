@@ -216,6 +216,7 @@ class Music(Plugin):
         except Exception as msg:
             handler.server.logger.info(msg)
 
+    # TODO 20191125: should this return only bool?
     def AudioFileFilter(
         self, f: str, filter_type: Optional[str] = None
     ) -> Union[bool, str]:
