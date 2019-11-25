@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import TYPE_CHECKING, Any, Dict
 from urllib.parse import quote
 
 from Cheetah.Template import Template  # type: ignore
@@ -7,6 +8,9 @@ from Cheetah.Template import Template  # type: ignore
 from . import buildhelp
 import config
 from plugin import Plugin
+
+if TYPE_CHECKING:
+    from httpserver import TivoHTTPHandler
 
 SCRIPTDIR = os.path.dirname(__file__)
 
@@ -34,9 +38,9 @@ with open(tsname, "r") as settings_template_fh:
 class Settings(Plugin):
     CONTENT_TYPE = "text/html"
 
-    def Quit(self, handler, query):
+    def Quit(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
         if hasattr(handler.server, "shutdown"):
-            handler.send_fixed(GOODBYE_MSG, "text/plain")
+            handler.send_fixed(GOODBYE_MSG.encode("utf-8"), "text/plain")
             if handler.server.in_service:
                 handler.server.stop = True
             else:
@@ -45,7 +49,7 @@ class Settings(Plugin):
         else:
             handler.send_error(501)
 
-    def Restart(self, handler, query):
+    def Restart(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
         if hasattr(handler.server, "shutdown"):
             handler.redir(RESTART_MSG, 10)
             handler.server.restart = True
@@ -57,13 +61,13 @@ class Settings(Plugin):
         else:
             handler.send_error(501)
 
-    def Reset(self, handler, query):
+    def Reset(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
         config.reset()
         handler.server.reset()
         handler.redir(RESET_MSG, 3)
         logging.getLogger("pyTivo.settings").info("pyTivo has been soft reset.")
 
-    def Settings(self, handler, query):
+    def Settings(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
         # Read config file new each time in case there was any outside edits
         config.reset()
 
@@ -101,7 +105,7 @@ class Settings(Plugin):
         t.has_shutdown = hasattr(handler.server, "shutdown")
         handler.send_html(str(t))
 
-    def each_section(self, query, label, section):
+    def each_section(self, query: Dict[str, Any], label: str, section: str) -> None:
         new_setting = new_value = " "
         if config.config.has_section(section):
             config.config.remove_section(section)
@@ -123,7 +127,7 @@ class Settings(Plugin):
         if not (new_setting == " " and new_value == " "):
             config.config.set(section, new_setting, new_value)
 
-    def UpdateSettings(self, handler, query):
+    def UpdateSettings(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
         config.reset()
         for section in ["Server", "_tivo_SD", "_tivo_HD"]:
             self.each_section(query, section, section)
