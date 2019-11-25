@@ -9,7 +9,7 @@ import sys
 import tempfile
 import threading
 import time
-from typing import Dict, Any, BinaryIO, Union, List
+from typing import Dict, Any, BinaryIO, Union, List, Tuple, Optional
 
 import lrucache
 
@@ -27,6 +27,8 @@ GOOD_MPEG_FPS = ["23.98", "24.00", "25.00", "29.97", "30.00", "50.00", "59.94", 
 BLOCKSIZE = 512 * 1024
 MAXBLOCKS = 2
 TIMEOUT = 600
+
+# TODO 20191125: vInfo should have a NamedTuple type?
 
 # TODO: No more subprocess.Popen._make_inheritable, need to verify on Windows
 # XXX BIG HACK
@@ -93,7 +95,7 @@ def transcode(
             tcmd, stdout=subprocess.PIPE, bufsize=(512 * 1024)
         )
         if tivo_compatible(inFile, tsn)[0]:
-            cmd = ""
+            cmd = [""]
             ffmpeg = tivodecode
         else:
             cmd = [ffmpeg_path, "-i", "-"] + settings
@@ -387,7 +389,9 @@ def select_format(tsn: str, mime: str) -> List[str]:
     return ["-f", fmt, "-"]
 
 
-def pad_TB(tivo_width, tivo_height, multiplier, vInfo):
+def pad_TB(
+    tivo_width: int, tivo_height: int, multiplier: float, vInfo: Dict[str, Any]
+) -> List[str]:
     endHeight = int(((tivo_width * vInfo["vHeight"]) / vInfo["vWidth"]) * multiplier)
     if endHeight % 2:
         endHeight -= 1
@@ -401,7 +405,9 @@ def pad_TB(tivo_width, tivo_height, multiplier, vInfo):
     ]
 
 
-def pad_LR(tivo_width, tivo_height, multiplier, vInfo):
+def pad_LR(
+    tivo_width: int, tivo_height: int, multiplier: float, vInfo: Dict[str, Any]
+) -> List[str]:
     endWidth = int((tivo_height * vInfo["vWidth"]) / (vInfo["vHeight"] * multiplier))
     if endWidth % 2:
         endWidth -= 1
@@ -415,7 +421,7 @@ def pad_LR(tivo_width, tivo_height, multiplier, vInfo):
     ]
 
 
-def select_aspect(inFile: str, tsn: str = ""):
+def select_aspect(inFile: str, tsn: str = "") -> List[str]:
     tivo_width = config.getTivoWidth(tsn)
     tivo_height = config.getTivoHeight(tsn)
 
@@ -592,7 +598,9 @@ def select_aspect(inFile: str, tsn: str = ""):
         return settings
 
 
-def tivo_compatible_video(vInfo, tsn: str, mime: str = ""):
+def tivo_compatible_video(
+    vInfo: Dict[str, Any], tsn: str, mime: str = ""
+) -> Tuple[bool, str]:
     message = (True, "")
     while True:
         codec = vInfo.get("vCodec", "")
@@ -653,7 +661,9 @@ def tivo_compatible_video(vInfo, tsn: str, mime: str = ""):
     return message
 
 
-def tivo_compatible_audio(vInfo, inFile: str, tsn: str, mime: str = ""):
+def tivo_compatible_audio(
+    vInfo: Dict[str, Any], inFile: str, tsn: str, mime: str = ""
+) -> Tuple[bool, str]:
     message = (True, "")
     while True:
         codec = vInfo.get("aCodec", "")
@@ -688,7 +698,9 @@ def tivo_compatible_audio(vInfo, inFile: str, tsn: str, mime: str = ""):
     return message
 
 
-def tivo_compatible_container(vInfo, inFile, mime=""):
+def tivo_compatible_container(
+    vInfo: Dict[str, Any], inFile: str, mime: str = ""
+) -> Tuple[bool, str]:
     message = (True, "")
     container = vInfo.get("container", "")
     if (mime == "video/x-tivo-mpeg-ts" and container != "mpegts") or (
@@ -700,7 +712,7 @@ def tivo_compatible_container(vInfo, inFile, mime=""):
     return message
 
 
-def tivo_compatible(inFile, tsn: str = "", mime: str = ""):
+def tivo_compatible(inFile: str, tsn: str = "", mime: str = "") -> Tuple[bool, str]:
     vInfo = video_info(inFile)
 
     message = (True, "all compatible")
@@ -732,10 +744,9 @@ def tivo_compatible(inFile, tsn: str = "", mime: str = ""):
     return message
 
 
-def video_info(inFile, cache=True):
-    vInfo = dict()
-    fname = str(inFile, "utf-8")
-    mtime = os.path.getmtime(fname)
+def video_info(inFile: str, cache: bool = True) -> Dict[str, Any]:
+    vInfo: Dict[str, Any] = {}
+    mtime = os.path.getmtime(inFile)
     if cache:
         if inFile in INFO_CACHE and INFO_CACHE[inFile][0] == mtime:
             LOGGER.debug("CACHE HIT! %s" % inFile)
@@ -758,9 +769,7 @@ def video_info(inFile, cache=True):
             INFO_CACHE[inFile] = (mtime, vInfo)
         return vInfo
 
-    if sys.platform == "win32":
-        fname = fname.encode("cp1252")
-    cmd = [ffmpeg_path, "-i", fname]
+    cmd = [ffmpeg_path, "-i", inFile]
     # Windows and other OS buffer 4096 and ffmpeg can output more than that.
     err_tmp = tempfile.TemporaryFile()
     ffmpeg = subprocess.Popen(
@@ -785,9 +794,9 @@ def video_info(inFile, cache=True):
         ffmpeg.wait()
 
     err_tmp.seek(0)
-    output = err_tmp.read()
+    output = err_tmp.read().encode("utf-8")
     err_tmp.close()
-    LOGGER.debug("ffmpeg output=%s" % output)
+    LOGGER.debug("ffmpeg output=%r" % output)
 
     attrs = {
         "container": r"Input #0, ([^,]+),",
@@ -985,7 +994,7 @@ def video_info(inFile, cache=True):
     return vInfo
 
 
-def audio_check(inFile: str, tsn: str):
+def audio_check(inFile: str, tsn: str) -> Optional[Dict[str, Any]]:
     cmd_string = (
         "-y -c:v mpeg2video -r 29.97 -b:v 1000k -c:a copy "
         + select_audiolang(inFile, tsn)
@@ -1009,7 +1018,7 @@ def audio_check(inFile: str, tsn: str):
     return vInfo
 
 
-def supported_format(inFile):
+def supported_format(inFile: str) -> bool:
     if video_info(inFile)["Supported"]:
         return True
     else:
@@ -1017,7 +1026,7 @@ def supported_format(inFile):
         return False
 
 
-def kill(popen):
+def kill(popen: subprocess.Popen) -> None:
     LOGGER.debug("killing pid=%s" % str(popen.pid))
     if sys.platform == "win32":
         win32kill(popen.pid)
@@ -1038,7 +1047,7 @@ def kill(popen):
                 time.sleep(0.5)
 
 
-def win32kill(pid):
+def win32kill(pid: int) -> None:
     import ctypes
 
     handle = ctypes.windll.kernel32.OpenProcess(1, False, pid)
