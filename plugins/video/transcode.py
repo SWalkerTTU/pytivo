@@ -492,9 +492,9 @@ def select_aspect(inFile: str, tsn: str = "") -> List[str]:
         if optWidth < tivo_width:
             tivo_width = optWidth
 
-    if vInfo.get("par2"):
+    if vInfo.par2:
         par2 = vInfo.par2
-    elif vInfo.get("par"):
+    elif vInfo.par:
         par2 = float(vInfo.par)
     else:
         # Assume PAR = 1.0
@@ -700,7 +700,7 @@ def tivo_compatible_audio(
 ) -> Tuple[bool, str]:
     message = (True, "")
     while True:
-        codec = vInfo.get("aCodec", "")
+        codec = vInfo.aCodec
 
         if codec is None:
             LOGGER.debug("No audio stream detected")
@@ -736,7 +736,7 @@ def tivo_compatible_container(
     vInfo: VideoInfo, inFile: str, mime: str = ""
 ) -> Tuple[bool, str]:
     message = (True, "")
-    container = vInfo.get("container", "")
+    container = vInfo.container
     if (mime == "video/x-tivo-mpeg-ts" and container != "mpegts") or (
         mime in ["video/x-tivo-mpeg", "video/mpeg", ""]
         and (container != "mpeg" or vInfo.vCodec == "mpeg1video")
