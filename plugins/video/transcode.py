@@ -9,7 +9,17 @@ import sys
 import tempfile
 import threading
 import time
-from typing import Dict, Any, BinaryIO, Union, List, Tuple, Optional
+from typing import (
+    Dict,
+    Any,
+    BinaryIO,
+    Union,
+    List,
+    Tuple,
+    Optional,
+    TypeVar,
+    NamedTuple,
+)
 
 import lrucache
 
@@ -28,28 +38,29 @@ BLOCKSIZE = 512 * 1024
 MAXBLOCKS = 2
 TIMEOUT = 600
 
-# TODO 20191125: vInfo should have a NamedTuple type? Or a class (mutable)
-class VideoInfo:
-    def __init__():
-        self.Supported: Optional[bool] = None  # is this tivo-supported
-        self.aCh: Optional[int] = None  # number of audio channels
-        self.aCodec: Optional[str] = None  # audio codec
-        self.aFreq: Optional[str] = None  # audio sample rate, number in string?
-        self.aKbps: Optional[str] = None  # but always cast to int
-        self.container: Optiona[str] = None  # av container file format
-        self.dar1: Optional[str] = None  # Desired? Aspect Ratio
-        self.kbps: Optional[str] = None  # but always used as int
-        self.mapAudio: Optional[List[Tuple[str, str]]] = None
-        self.mapVideo: Optional[str] = None
-        self.millisecs: Optional[int] = None  # ffmpeg Override_millisecs (maybe float?)
-        self.par: Optional[str] = None  # string version of float? "1.232"?
-        self.par1: Optional[str] = None  # string version e.g. "4:3"
-        self.par2: Optional[float] = None  # float version of ratio
-        self.rawmeta: Optional[Dict[str, str]] = None
-        self.vCodec: Optional[str] = None
-        self.vFps: Optional[str] = None # string of float (maybe could be float)
-        self.vHeight: Optional[int] = None  # video file height
-        self.vWidth: Optional[int] = None  # video file height
+T = TypeVar("T")
+
+
+class VideoInfo(NamedTuple):
+    Supported: bool  # is this tivo-supported
+    aCh: Optional[int] = None  # number of audio channels
+    aCodec: Optional[str] = None  # audio codec
+    aFreq: Optional[str] = None  # audio sample rate, number in string?
+    aKbps: Optional[str] = None  # but always cast to int
+    container: Optional[str] = None  # av container file format
+    dar1: Optional[str] = None  # Desired? Aspect Ratio
+    kbps: Optional[str] = None  # but always used as int
+    mapAudio: Optional[List[Tuple[str, str]]] = None
+    mapVideo: Optional[str] = None
+    millisecs: Optional[int] = None  # ffmpeg Override_millisecs (maybe float?)
+    par: Optional[str] = None  # string version of float? "1.232"?
+    par1: Optional[str] = None  # string version e.g. "4:3"
+    par2: Optional[float] = None  # float version of ratio
+    rawmeta: Optional[Dict[str, str]] = None
+    vCodec: Optional[str] = None
+    vFps: Optional[str] = None  # string of float (maybe could be float)
+    vHeight: Optional[int] = None  # video file height
+    vWidth: Optional[int] = None  # video file height
 
 
 # TODO: No more subprocess.Popen._make_inheritable, need to verify on Windows
@@ -76,7 +87,7 @@ def transcode(
     tsn: str = "",
     mime: str = "",
     thead: str = "",
-) -> Union[str, int]:
+) -> Union[List[str], int]:
     vcodec = select_videocodec(inFile, tsn, mime)
 
     settings = select_buffsize(tsn) + vcodec
@@ -105,14 +116,20 @@ def transcode(
     if isQuery:
         return settings
 
-    # TODO 20191125: fail with error if can't find ffmpeg
     ffmpeg_path = config.get_bin("ffmpeg")
+    if ffmpeg_path is None:
+        LOGGER.error("No ffmpeg binary found")
+        return 0
 
     if inFile[-5:].lower() == ".tivo":
-        # TODO 20191125: fail with error if can't find tivodecode
         tivodecode_path = config.get_bin("tivodecode")
-        # TODO 20191125: fial if can't get tivo_mak
+        if tivodecode_path is None:
+            LOGGER.error("No tivodecode binary found.")
+            return 0
         tivo_mak = config.get_server("tivo_mak", "")
+        if tivo_mak == "":
+            LOGGER.error("No valid tivo_mak found.")
+            return 0
         tcmd = [tivodecode_path, "-m", tivo_mak, inFile]
         tivodecode = subprocess.Popen(
             tcmd, stdout=subprocess.PIPE, bufsize=(512 * 1024)
@@ -254,14 +271,14 @@ def select_audiocodec(
     if inFile[-5:].lower() == ".tivo":
         return ["-c:a", "copy"]
     vInfo = video_info(inFile)
-    codectype = vInfo["vCodec"]
+    codectype = vInfo.vCodec
     # Default, compatible with all TiVo's
     codec = "ac3"
     compatiblecodecs = ("ac3", "liba52", "mp2")
 
-    if vInfo["aCodec"] in compatiblecodecs:
-        aKbps = vInfo["aKbps"]
-        aCh = vInfo["aCh"]
+    if vInfo.aCodec in compatiblecodecs:
+        aKbps = vInfo.aKbps
+        aCh = vInfo.aCh
         if aKbps is None:
             if not isQuery:
                 vInfoQuery = audio_check(inFile, tsn)
@@ -269,14 +286,14 @@ def select_audiocodec(
                     aKbps = None
                     aCh = None
                 else:
-                    aKbps = vInfoQuery["aKbps"]
-                    aCh = vInfoQuery["aCh"]
+                    aKbps = vInfoQuery.aKbps
+                    aCh = vInfoQuery.aCh
             else:
                 codec = "TBA"
         if aKbps and int(aKbps) <= config.getMaxAudioBR(tsn):
             # compatible codec and bitrate, do not reencode audio
             codec = "copy"
-        if vInfo["aCodec"] != "ac3" and (aCh is None or aCh > 2):
+        if vInfo.aCodec != "ac3" and (aCh is None or aCh > 2):
             codec = "ac3"
     val = ["-c:a", codec]
     if not (codec == "copy" and codectype == "mpeg2video"):
@@ -287,15 +304,16 @@ def select_audiocodec(
 def select_audiofr(inFile: str, tsn: str) -> List[str]:
     freq = "48000"  # default
     vInfo = video_info(inFile)
-    if vInfo["aFreq"] == "44100":
+    if vInfo.aFreq == "44100":
         # compatible frequency
-        freq = vInfo["aFreq"]
+        freq = vInfo.aFreq
     return ["-ar", freq]
 
 
 def select_audioch(inFile: str, tsn: str) -> List[str]:
     # AC-3 max channels is 5.1
-    if video_info(inFile)["aCh"] > 6:
+    vInfo = video_info(inFile)
+    if vInfo.aCh is not None and vInfo.aCh > 6:
         LOGGER.debug("Too many audio channels for AC-3, using 5.1 instead")
         return ["-ac", "6"]
     return []
@@ -305,13 +323,18 @@ def select_audiolang(inFile: str, tsn: str) -> str:
     vInfo = video_info(inFile)
     audio_lang = config.get_tsn("audio_lang", tsn)
     LOGGER.debug("audio_lang: %s" % audio_lang)
-    if vInfo["mapAudio"]:
+    if vInfo.mapAudio:
         # default to first detected audio stream to begin with
-        stream = vInfo["mapAudio"][0][0]
+        stream = vInfo.mapAudio[0][0]
         LOGGER.debug("set first detected audio stream by default: %s" % stream)
-    if audio_lang is not None and vInfo["mapVideo"] is not None:
+    # TODO: why do we check mapVideo in the following?
+    if (
+        audio_lang is not None
+        and vInfo.mapAudio is not None
+        and vInfo.mapVideo is not None
+    ):
         langmatch_curr = []
-        langmatch_prev = vInfo["mapAudio"][:]
+        langmatch_prev = vInfo.mapAudio[:]
         for lang in audio_lang.replace(" ", "").lower().split(","):
             LOGGER.debug("matching lang: %s" % lang)
             for s, l in langmatch_prev:
@@ -334,9 +357,9 @@ def select_audiolang(inFile: str, tsn: str) -> str:
                 langmatch_curr = []
     # don't let FFmpeg auto select audio stream, pyTivo defaults to
     # first detected
-    if stream:
+    if stream and vInfo.mapVideo is not None:
         LOGGER.debug("selected audio stream: %s" % stream)
-        return "-map " + vInfo["mapVideo"] + " -map " + stream
+        return "-map " + vInfo.mapVideo + " -map " + stream
     # if no audio is found
     LOGGER.debug("selected audio stream: None detected")
     return ""
@@ -345,7 +368,7 @@ def select_audiolang(inFile: str, tsn: str) -> str:
 def select_videofps(inFile: str, tsn: str) -> List[str]:
     vInfo = video_info(inFile)
     fps = ["-r", "29.97"]  # default
-    if config.isHDtivo(tsn) and vInfo["vFps"] in GOOD_MPEG_FPS:
+    if config.isHDtivo(tsn) and vInfo.vFps in GOOD_MPEG_FPS:
         fps = []
     return fps
 
@@ -356,7 +379,7 @@ def select_videocodec(inFile: str, tsn: str, mime: str = "") -> List[str]:
     if tivo_compatible_video(vInfo, tsn, mime)[0]:
         codec.append("copy")
         if mime == "video/x-tivo-mpeg-ts":
-            org_codec = vInfo.get("vCodec", "")
+            org_codec = vInfo.vCodec
             if org_codec == "h264":
                 codec += ["-bsf:v", "h264_mp4toannexb", "-muxdelay", "0"]
             elif org_codec == "hevc":
@@ -373,14 +396,15 @@ def select_videobr(inFile: str, tsn: str, mime: str = "") -> List[str]:
 def select_videostr(inFile: str, tsn: str, mime: str = "") -> int:
     vInfo = video_info(inFile)
     if tivo_compatible_video(vInfo, tsn, mime)[0]:
-        video_str = int(vInfo["kbps"])
-        if vInfo["aKbps"]:
-            video_str -= int(vInfo["aKbps"])
+        # TODO: tivo_compatible_video checks that vInfo.kbps is not None
+        video_str = int(vInfo.kbps)
+        if vInfo.aKbps:
+            video_str -= int(vInfo.aKbps)
         video_str *= 1000
     else:
         video_str = config.strtod(config.getVideoBR(tsn))
-        if config.isHDtivo(tsn) and vInfo["kbps"]:
-            video_str = max(video_str, int(vInfo["kbps"]) * 1000)
+        if config.isHDtivo(tsn) and vInfo.kbps:
+            video_str = max(video_str, int(vInfo.kbps) * 1000)
         video_str = int(min(config.strtod(config.getMaxVideoBR(tsn)) * 0.95, video_str))
     return video_str
 
@@ -413,9 +437,9 @@ def select_format(tsn: str, mime: str) -> List[str]:
 
 
 def pad_TB(
-    tivo_width: int, tivo_height: int, multiplier: float, vInfo: Dict[str, Any]
+    tivo_width: int, tivo_height: int, multiplier: float, vInfo: VideoInfo
 ) -> List[str]:
-    endHeight = int(((tivo_width * vInfo["vHeight"]) / vInfo["vWidth"]) * multiplier)
+    endHeight = int(((tivo_width * vInfo.vHeight) / vInfo.vWidth) * multiplier)
     if endHeight % 2:
         endHeight -= 1
     topPadding = (tivo_height - endHeight) / 2
@@ -429,9 +453,9 @@ def pad_TB(
 
 
 def pad_LR(
-    tivo_width: int, tivo_height: int, multiplier: float, vInfo: Dict[str, Any]
+    tivo_width: int, tivo_height: int, multiplier: float, vInfo: VideoInfo
 ) -> List[str]:
-    endWidth = int((tivo_height * vInfo["vWidth"]) / (vInfo["vHeight"] * multiplier))
+    endWidth = int((tivo_height * vInfo.vWidth) / (vInfo.vHeight * multiplier))
     if endWidth % 2:
         endWidth -= 1
     leftPadding = (tivo_width - endWidth) / 2
@@ -461,17 +485,17 @@ def select_aspect(inFile: str, tsn: str = "") -> List[str]:
     LOGGER.debug("optres: %s" % optres)
 
     if optres:
-        optHeight = config.nearestTivoHeight(vInfo["vHeight"])
-        optWidth = config.nearestTivoWidth(vInfo["vWidth"])
+        optHeight = config.nearestTivoHeight(vInfo.vHeight)
+        optWidth = config.nearestTivoWidth(vInfo.vWidth)
         if optHeight < tivo_height:
             tivo_height = optHeight
         if optWidth < tivo_width:
             tivo_width = optWidth
 
     if vInfo.get("par2"):
-        par2 = vInfo["par2"]
+        par2 = vInfo.par2
     elif vInfo.get("par"):
-        par2 = float(vInfo["par"])
+        par2 = float(vInfo.par)
     else:
         # Assume PAR = 1.0
         par2 = 1.0
@@ -483,46 +507,42 @@ def select_aspect(inFile: str, tsn: str = "") -> List[str]:
         )
         % (
             inFile,
-            vInfo["vCodec"],
-            vInfo["vWidth"],
-            vInfo["vHeight"],
-            vInfo["vFps"],
-            vInfo["millisecs"],
+            vInfo.vCodec,
+            vInfo.vWidth,
+            vInfo.vHeight,
+            vInfo.vFps,
+            vInfo.millisecs,
             tivo_height,
             tivo_width,
         )
     )
 
     if config.isHDtivo(tsn) and not optres:
-        if vInfo["par"]:
+        if vInfo.par:
             npar = par2
 
             # adjust for pixel aspect ratio, if set
 
             if npar < 1.0:
-                return [
-                    "-s",
-                    "%dx%d" % (vInfo["vWidth"], math.ceil(vInfo["vHeight"] / npar)),
-                ]
+                return ["-s", "%dx%d" % (vInfo.vWidth, math.ceil(vInfo.vHeight / npar))]
             elif npar > 1.0:
                 # FFMPEG expects width to be a multiple of two
                 return [
                     "-s",
-                    "%dx%d"
-                    % (math.ceil(vInfo["vWidth"] * npar / 2.0) * 2, vInfo["vHeight"]),
+                    "%dx%d" % (math.ceil(vInfo.vWidth * npar / 2.0) * 2, vInfo.vHeight),
                 ]
 
-        if vInfo["vHeight"] <= tivo_height:
+        if vInfo.vHeight <= tivo_height:
             # pass all resolutions to S3, except heights greater than
             # conf height
             return []
         # else, resize video.
 
-    d = gcd(vInfo["vHeight"], vInfo["vWidth"])
-    rheight, rwidth = vInfo["vHeight"] / d, vInfo["vWidth"] / d
+    d = gcd(vInfo.vHeight, vInfo.vWidth)
+    rheight, rwidth = vInfo.vHeight / d, vInfo.vWidth / d
     LOGGER.debug("rheight=%s rwidth=%s" % (rheight, rwidth))
 
-    if (rwidth, rheight) in [(1, 1)] and vInfo["par1"] == "8:9":
+    if (rwidth, rheight) in [(1, 1)] and vInfo.par1 == "8:9":
         LOGGER.debug("File + PAR is within 4:3.")
         return ["-aspect", "4:3", "-s", "%sx%s" % (tivo_width, tivo_height)]
 
@@ -534,13 +554,13 @@ def select_aspect(inFile: str, tsn: str = "") -> List[str]:
         (59, 72),
         (59, 36),
         (59, 54),
-    ] or vInfo["dar1"] == "4:3":
+    ] or vInfo.dar1 == "4:3":
         LOGGER.debug("File is within 4:3 list.")
         return ["-aspect", "4:3", "-s", "%sx%s" % (tivo_width, tivo_height)]
 
     elif (
         (rwidth, rheight) in [(16, 9), (20, 11), (40, 33), (118, 81), (59, 27)]
-        or vInfo["dar1"] == "16:9"
+        or vInfo.dar1 == "16:9"
     ) and (aspect169 or config.get169Letterbox(tsn)):
         LOGGER.debug("File is within 16:9 list and 16:9 allowed.")
 
@@ -555,7 +575,7 @@ def select_aspect(inFile: str, tsn: str = "") -> List[str]:
 
         multiplier16by9 = (16.0 * tivo_height) / (9.0 * tivo_width) / par2
         multiplier4by3 = (4.0 * tivo_height) / (3.0 * tivo_width) / par2
-        ratio = vInfo["vWidth"] * 100 * par2 / vInfo["vHeight"]
+        ratio = vInfo.vWidth * 100 * par2 / vInfo.vHeight
         LOGGER.debug(
             "par2=%.3f ratio=%.3f mult4by3=%.3f" % (par2, ratio, multiplier4by3)
         )
@@ -622,11 +642,11 @@ def select_aspect(inFile: str, tsn: str = "") -> List[str]:
 
 
 def tivo_compatible_video(
-    vInfo: Dict[str, Any], tsn: str, mime: str = ""
+    vInfo: VideoInfo, tsn: str, mime: str = ""
 ) -> Tuple[bool, str]:
     message = (True, "")
     while True:
-        codec = vInfo.get("vCodec", "")
+        codec = vInfo.vCodec
         if mime == "video/x-tivo-mpeg-ts":
             if not (codec in ("h264", "mpeg2video")):
                 message = (False, "vCodec %s not compatible" % codec)
@@ -637,38 +657,37 @@ def tivo_compatible_video(
             message = (False, "vCodec %s not compatible" % codec)
             break
 
-        if vInfo["kbps"] is not None:
-            abit = max("0", vInfo["aKbps"])
+        if vInfo.kbps is not None:
+            abit = max("0", vInfo.aKbps)
             if (
-                int(vInfo["kbps"]) - int(abit)
+                int(vInfo.kbps) - int(abit)
                 > config.strtod(config.getMaxVideoBR(tsn)) / 1000
             ):
-                message = (False, "%s kbps exceeds max video bitrate" % vInfo["kbps"])
+                message = (False, "%s kbps exceeds max video bitrate" % vInfo.kbps)
                 break
         else:
-            message = (False, "%s kbps not supported" % vInfo["kbps"])
+            message = (False, "%s kbps not supported" % vInfo.kbps)
             break
 
         if config.isHDtivo(tsn):
             # HD Tivo detected, skipping remaining tests.
             break
 
-        if not vInfo["vFps"] in ["29.97", "59.94"]:
-            message = (False, "%s vFps, should be 29.97" % vInfo["vFps"])
+        if not vInfo.vFps in ["29.97", "59.94"]:
+            message = (False, "%s vFps, should be 29.97" % vInfo.vFps)
             break
 
         if (config.get169Blacklist(tsn) and not config.get169Setting(tsn)) or (
             config.get169Letterbox(tsn) and config.get169Setting(tsn)
         ):
-            if vInfo["dar1"] and vInfo["dar1"] not in ("4:3", "8:9", "880:657"):
+            if vInfo.dar1 and vInfo.dar1 not in ("4:3", "8:9", "880:657"):
                 message = (
                     False,
-                    ("DAR %s not supported " + "by BLACKLIST_169 tivos")
-                    % vInfo["dar1"],
+                    ("DAR %s not supported " + "by BLACKLIST_169 tivos") % vInfo.dar1,
                 )
                 break
 
-        mode = (vInfo["vWidth"], vInfo["vHeight"])
+        mode = (vInfo.vWidth, vInfo.vHeight)
         if mode not in [
             (720, 480),
             (704, 480),
@@ -685,7 +704,7 @@ def tivo_compatible_video(
 
 
 def tivo_compatible_audio(
-    vInfo: Dict[str, Any], inFile: str, tsn: str, mime: str = ""
+    vInfo: VideoInfo, inFile: str, tsn: str, mime: str = ""
 ) -> Tuple[bool, str]:
     message = (True, "")
     while True:
@@ -708,13 +727,13 @@ def tivo_compatible_audio(
             message = (False, "aCodec %s not compatible" % codec)
             break
 
-        if not vInfo["aKbps"] or int(vInfo["aKbps"]) > config.getMaxAudioBR(tsn):
-            message = (False, "%s kbps exceeds max audio bitrate" % vInfo["aKbps"])
+        if not vInfo.aKbps or int(vInfo.aKbps) > config.getMaxAudioBR(tsn):
+            message = (False, "%s kbps exceeds max audio bitrate" % vInfo.aKbps)
             break
 
         audio_lang = config.get_tsn("audio_lang", tsn)
         if audio_lang:
-            if vInfo["mapAudio"][0][0] != select_audiolang(inFile, tsn)[-3:]:
+            if vInfo.mapAudio[0][0] != select_audiolang(inFile, tsn)[-3:]:
                 message = (False, "%s preferred audio track exists" % audio_lang)
         break
 
@@ -722,13 +741,13 @@ def tivo_compatible_audio(
 
 
 def tivo_compatible_container(
-    vInfo: Dict[str, Any], inFile: str, mime: str = ""
+    vInfo: VideoInfo, inFile: str, mime: str = ""
 ) -> Tuple[bool, str]:
     message = (True, "")
     container = vInfo.get("container", "")
     if (mime == "video/x-tivo-mpeg-ts" and container != "mpegts") or (
         mime in ["video/x-tivo-mpeg", "video/mpeg", ""]
-        and (container != "mpeg" or vInfo["vCodec"] == "mpeg1video")
+        and (container != "mpeg" or vInfo.vCodec == "mpeg1video")
     ):
         message = (False, "container %s not compatible" % container)
 
@@ -767,7 +786,7 @@ def tivo_compatible(inFile: str, tsn: str = "", mime: str = "") -> Tuple[bool, s
     return message
 
 
-def video_info(inFile: str, cache: bool = True) -> Dict[str, Any]:
+def video_info(inFile: str, cache: bool = True) -> VideoInfo:
     vInfo: Dict[str, Any] = {}
     mtime = os.path.getmtime(inFile)
     if cache:
@@ -788,9 +807,10 @@ def video_info(inFile: str, cache: bool = True) -> Dict[str, Any]:
         ]:
             vInfo["Supported"] = False
         vInfo.update({"millisecs": 0, "vWidth": 704, "vHeight": 480, "rawmeta": {}})
+        video_info = VideoInfo(**vInfo)
         if cache:
-            INFO_CACHE[inFile] = (mtime, vInfo)
-        return vInfo
+            INFO_CACHE[inFile] = (mtime, video_info)
+        return video_info
 
     cmd = [ffmpeg_path, "-i", inFile]
     # Windows and other OS buffer 4096 and ffmpeg can output more than that.
@@ -810,9 +830,10 @@ def video_info(inFile: str, cache: bool = True) -> Dict[str, Any]:
         if ffmpeg.poll() is None:
             kill(ffmpeg)
             vInfo["Supported"] = False
+            video_info = VideoInfo(**vInfo)
             if cache:
-                INFO_CACHE[inFile] = (mtime, vInfo)
-            return vInfo
+                INFO_CACHE[inFile] = (mtime, video_info)
+            return video_info
     else:
         ffmpeg.wait()
 
@@ -840,7 +861,7 @@ def video_info(inFile: str, cache: bool = True) -> Dict[str, Any]:
                 vInfo[attr] = ""
                 vInfo["Supported"] = False
             else:
-                vInfo[attr] = None
+                vInfo["attr"] = None
             LOGGER.debug("failed at " + attr)
 
     rezre = re.compile(
@@ -870,8 +891,8 @@ def video_info(inFile: str, cache: bool = True) -> Dict[str, Any]:
         vInfo["vWidth"] = int(x.group(1))
         vInfo["vHeight"] = int(x.group(2))
     else:
-        vInfo["vWidth"] = ""
-        vInfo["vHeight"] = ""
+        vInfo["vWidth"] = None
+        vInfo["vHeight"] = None
         vInfo["Supported"] = False
         LOGGER.debug("failed at vWidth/vHeight")
 
@@ -1007,10 +1028,13 @@ def video_info(inFile: str, cache: bool = True) -> Dict[str, Any]:
     if cache:
         INFO_CACHE[inFile] = (mtime, vInfo)
     LOGGER.debug("; ".join(["%s=%s" % (k, v) for k, v in list(vInfo.items())]))
-    return vInfo
+    video_info = VideoInfo(**vInfo)
+    if cache:
+        INFO_CACHE[inFile] = (mtime, video_info)
+    return video_info
 
 
-def audio_check(inFile: str, tsn: str) -> Optional[Dict[str, Any]]:
+def audio_check(inFile: str, tsn: str) -> Optional[VideoInfo]:
     cmd_string = (
         "-y -c:v mpeg2video -r 29.97 -b:v 1000k -c:a copy "
         + select_audiolang(inFile, tsn)
@@ -1035,7 +1059,7 @@ def audio_check(inFile: str, tsn: str) -> Optional[Dict[str, Any]]:
 
 
 def supported_format(inFile: str) -> bool:
-    if video_info(inFile)["Supported"]:
+    if video_info(inFile).Supported:
         return True
     else:
         LOGGER.debug("FALSE, file not supported %s" % inFile)
