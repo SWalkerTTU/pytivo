@@ -243,7 +243,9 @@ class Video(Plugin):
             if compatible:
                 transcode_options = []
             else:
-                transcode_options = transcode.transcode_query(full_path, "", tsn, mime)
+                transcode_options = transcode.transcode_settings(
+                    True, full_path, "", tsn, mime
+                )
             # TODO 20191125: vInfo has no method items(), fix
             data["vHost"] = (
                 ["TRANSCODE=%s, %s" % (["YES", "NO"][compatible], reason)]

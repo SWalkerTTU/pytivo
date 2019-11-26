@@ -80,8 +80,13 @@ class VideoInfo(NamedTuple):
 #    patchSubprocess()
 
 
-def transcode_query(
-    inFile: str, outFile: BinaryIO, tsn: str = "", mime: str = "", thead: str = ""
+def transcode_settings(
+    isQuery: bool,
+    inFile: str,
+    outFile: BinaryIO,
+    tsn: str = "",
+    mime: str = "",
+    thead: str = "",
 ) -> List[str]:
     vcodec = select_videocodec(inFile, tsn, mime)
 
@@ -94,7 +99,7 @@ def transcode_query(
             + select_aspect(inFile, tsn)
         )
 
-    acodec = select_audiocodec(True, inFile, tsn)
+    acodec = select_audiocodec(isQuery, inFile, tsn)
     settings += acodec
     if not acodec[1] == "copy":
         settings += (
@@ -114,8 +119,8 @@ def transcode_query(
 def transcode(
     inFile: str, outFile: BinaryIO, tsn: str = "", mime: str = "", thead: str = ""
 ) -> int:
-    settings = transcode_query(
-        inFile=inFile, outFile=outFile, tsn=tsn, mime=mime, thead=thead
+    settings = transcode_settings(
+        isQuery=False, inFile=inFile, outFile=outFile, tsn=tsn, mime=mime, thead=thead
     )
 
     ffmpeg_path = config.get_bin("ffmpeg")
