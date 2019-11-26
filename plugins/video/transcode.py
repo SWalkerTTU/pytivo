@@ -28,7 +28,29 @@ BLOCKSIZE = 512 * 1024
 MAXBLOCKS = 2
 TIMEOUT = 600
 
-# TODO 20191125: vInfo should have a NamedTuple type?
+# TODO 20191125: vInfo should have a NamedTuple type? Or a class (mutable)
+class VideoInfo:
+    def __init__():
+        self.Supported: Optional[bool] = None  # is this tivo-supported
+        self.aCh: Optional[int] = None  # number of audio channels
+        self.aCodec: Optional[str] = None  # audio codec
+        self.aFreq: Optional[str] = None  # audio sample rate, number in string?
+        self.aKbps: Optional[str] = None  # but always cast to int
+        self.container: Optiona[str] = None  # av container file format
+        self.dar1: Optional[str] = None  # Desired? Aspect Ratio
+        self.kbps: Optional[str] = None  # but always used as int
+        self.mapAudio: Optional[List[Tuple[str, str]]] = None
+        self.mapVideo: Optional[str] = None
+        self.millisecs: Optional[int] = None  # ffmpeg Override_millisecs (maybe float?)
+        self.par: Optional[str] = None  # string version of float? "1.232"?
+        self.par1: Optional[str] = None  # string version e.g. "4:3"
+        self.par2: Optional[float] = None  # float version of ratio
+        self.rawmeta: Optional[Dict[str, str]] = None
+        self.vCodec: Optional[str] = None
+        self.vFps: Optional[str] = None # string of float (maybe could be float)
+        self.vHeight: Optional[int] = None  # video file height
+        self.vWidth: Optional[int] = None  # video file height
+
 
 # TODO: No more subprocess.Popen._make_inheritable, need to verify on Windows
 # XXX BIG HACK
