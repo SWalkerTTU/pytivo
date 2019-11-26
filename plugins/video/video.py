@@ -23,7 +23,7 @@ from plugin import Plugin, quote
 if TYPE_CHECKING:
     from httpserver import TivoHTTPHandler
 
-logger = logging.getLogger("pyTivo.video.video")
+LOGGER = logging.getLogger("pyTivo.video.video")
 
 SCRIPTDIR = os.path.dirname(__file__)
 
@@ -138,7 +138,7 @@ class Video(Plugin):
         handler.send_header("Content-Type", mime)
         handler.end_headers()
 
-        logger.info(
+        LOGGER.info(
             '[%s] Start sending "%s" to %s'
             % (time.strftime("%d/%b/%Y %H:%M:%S"), path, tivo_name)
         )
@@ -149,7 +149,7 @@ class Video(Plugin):
             if compatible:
                 if faking and not offset:
                     handler.wfile.write(thead)
-                logger.debug('"%s" is tivo compatible' % path)
+                LOGGER.debug('"%s" is tivo compatible' % path)
                 f = open(path, "rb")
                 try:
                     if offset:
@@ -162,10 +162,10 @@ class Video(Plugin):
                         handler.wfile.write(block)
                         count += len(block)
                 except Exception as msg:
-                    logger.info(msg)
+                    LOGGER.info(msg)
                 f.close()
             else:
-                logger.debug('"%s" is not tivo compatible' % path)
+                LOGGER.debug('"%s" is not tivo compatible' % path)
                 if offset:
                     count = transcode.resume_transfer(path, handler.wfile, offset)
                 else:
@@ -175,13 +175,13 @@ class Video(Plugin):
                 handler.wfile.write(b"0\r\n\r\n")
             handler.wfile.flush()
         except Exception as msg:
-            logger.info(msg)
+            LOGGER.info(msg)
 
         mega_elapsed = (time.time() - start) * 1024 * 1024
         if mega_elapsed < 1:
             mega_elapsed = 1
         rate = count * 8.0 / mega_elapsed
-        logger.info(
+        LOGGER.info(
             '[%s] Done sending "%s" to %s, %d bytes, %.2f Mb/s'
             % (time.strftime("%d/%b/%Y %H:%M:%S"), path, tivo_name, count, rate)
         )
@@ -226,6 +226,10 @@ class Video(Plugin):
     ) -> Dict[str, Any]:
         data: Dict[str, Any] = {}
         vInfo = transcode.video_info(full_path)
+
+        if vInfo.vHeight is None or vInfo.vWidth is None:
+            LOGGER.error("vInfo.vHeight or vInfo.vWidth is None")
+            return data
 
         if (vInfo.vHeight >= 720 and config.getTivoHeight >= 720) or (
             vInfo.vWidth >= 1280 and config.getTivoWidth >= 1280
@@ -273,14 +277,14 @@ class Video(Plugin):
                 try:
                     now = datetime.utcfromtimestamp(mtime)
                 except:
-                    logger.warning("Bad file time on " + full_path)
+                    LOGGER.warning("Bad file time on " + full_path)
             elif data["time"].lower() == "oad":
                 now = isodt(data["originalAirDate"])
             else:
                 try:
                     now = isodt(data["time"])
                 except:
-                    logger.warning(
+                    LOGGER.warning(
                         "Bad time format: " + data["time"] + " , using current time"
                     )
 
@@ -334,7 +338,7 @@ class Video(Plugin):
             try:
                 ltime = time.localtime(mtime)
             except:
-                logger.warning("Bad file time on " + str(f.name, "utf-8"))
+                LOGGER.warning("Bad file time on " + str(f.name, "utf-8"))
                 mtime = time.time()
                 ltime = time.localtime(mtime)
             video["captureDate"] = hex(int(mtime))
