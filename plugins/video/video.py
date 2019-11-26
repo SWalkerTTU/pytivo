@@ -196,14 +196,13 @@ class Video(Plugin):
                 if f.startswith("."):
                     continue
                 f = os.path.join(full_path, f)
-                f2 = f.encode("utf-8")
                 if os.path.isdir(f):
                     count += 1
                 elif use_extensions:
-                    if os.path.splitext(f2)[1].lower() in EXTENSIONS:
+                    if os.path.splitext(f)[1].lower() in EXTENSIONS:
                         count += 1
-                elif f2 in transcode.info_cache:
-                    if transcode.supported_format(f2):
+                elif f in transcode.INFO_CACHE:
+                    if transcode.supported_format(f):
                         count += 1
         except:
             pass
@@ -350,7 +349,7 @@ class Video(Plugin):
                 video["small_path"] = subcname + "/" + video["name"]
                 video["total_items"] = self.__total_items(f.name)
             else:
-                if len(files) == 1 or f.name in transcode.info_cache:
+                if len(files) == 1 or f.name in transcode.INFO_CACHE:
                     video["valid"] = transcode.supported_format(f.name)
                     if video["valid"]:
                         video.update(self.metadata_full(f.name, tsn, mtime=mtime))
