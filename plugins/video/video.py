@@ -7,7 +7,7 @@ import _thread
 import time
 import urllib.request, urllib.parse, urllib.error
 import zlib
-from UserDict import DictMixin
+from collections import MutableMapping
 from datetime import datetime, timedelta
 from xml.sax.saxutils import escape
 
@@ -457,7 +457,7 @@ class Video(Plugin):
         handler.send_xml(details)
 
 
-class VideoDetails(DictMixin):
+class VideoDetails(MutableMapping):
     def __init__(self, d=None):
         if d:
             self.d = d
