@@ -29,6 +29,7 @@ import metadata
 LOGGER = logging.getLogger("pyTivo.video.transcode")
 
 INFO_CACHE = lrucache.LRUCache(1000)
+# TODO 20191126: possibly make FFMPEG_PROCS a class because heterogneous types
 FFMPEG_PROCS: Dict[str, Any] = {}
 REAPERS: Dict[str, Any] = {}
 
@@ -52,7 +53,7 @@ class VideoInfo(NamedTuple):
     kbps: Optional[int] = None  # but always used as int
     mapAudio: Optional[List[Tuple[str, str]]] = None
     mapVideo: Optional[str] = None
-    millisecs: Optional[int] = None  # ffmpeg Override_millisecs (maybe float?)
+    millisecs: Optional[int] = None  # duration? ffmpeg Override_millisecs
     par: Optional[str] = None  # string version of float? "1.232"?
     par1: Optional[str] = None  # string version e.g. "4:3"
     par2: Optional[float] = None  # float version of ratio
@@ -81,12 +82,7 @@ class VideoInfo(NamedTuple):
 
 
 def transcode_settings(
-    isQuery: bool,
-    inFile: str,
-    outFile: BinaryIO,
-    tsn: str = "",
-    mime: str = "",
-    thead: str = "",
+    isQuery: bool, inFile: str, tsn: str = "", mime: str = ""
 ) -> List[str]:
     vcodec = select_videocodec(inFile, tsn, mime)
 
@@ -117,11 +113,9 @@ def transcode_settings(
 
 
 def transcode(
-    inFile: str, outFile: BinaryIO, tsn: str = "", mime: str = "", thead: str = ""
+    inFile: str, outFile: BinaryIO, tsn: str = "", mime: str = "", thead: bytes = b""
 ) -> int:
-    settings = transcode_settings(
-        isQuery=False, inFile=inFile, outFile=outFile, tsn=tsn, mime=mime, thead=thead
-    )
+    settings = transcode_settings(isQuery=False, inFile=inFile, tsn=tsn, mime=mime)
 
     ffmpeg_path = config.get_bin("ffmpeg")
     if ffmpeg_path is None:

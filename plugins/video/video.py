@@ -9,6 +9,7 @@ import urllib.request, urllib.parse, urllib.error
 import zlib
 from collections import MutableMapping
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Optional, List, Dict, Any
 from xml.sax.saxutils import escape
 
 from Cheetah.Template import Template  # type: ignore
@@ -18,6 +19,9 @@ import config
 import metadata
 from . import transcode
 from plugin import Plugin, quote
+
+if TYPE_CHECKING:
+    from httpserver import TivoHTTPHandler
 
 logger = logging.getLogger("pyTivo.video.video")
 
@@ -52,15 +56,15 @@ except:
     use_extensions = False
 
 
-def uniso(iso):
+def uniso(iso: str) -> time.struct_time:
     return time.strptime(iso[:19], "%Y-%m-%dT%H:%M:%S")
 
 
-def isodt(iso):
+def isodt(iso: str) -> datetime:
     return datetime(*uniso(iso)[:6])
 
 
-def isogm(iso):
+def isogm(iso: str) -> int:
     return int(calendar.timegm(uniso(iso)))
 
 
@@ -70,17 +74,19 @@ class Video(Plugin):
 
     tvbus_cache = LRUCache(1)
 
-    def video_file_filter(self, full_path, type=None):
-        if os.path.isdir(str(full_path, "utf-8")):
+    def video_file_filter(self, full_path: str, type: Optional[str] = None) -> bool:
+        if os.path.isdir(full_path):
             return True
         if use_extensions:
             return os.path.splitext(full_path)[1].lower() in EXTENSIONS
         else:
             return transcode.supported_format(full_path)
 
-    def send_file(self, handler, path, query):
+    def send_file(
+        self, handler: "TivoHTTPHandler", path: str, query: Dict[str, Any]
+    ) -> None:
         mime = "video/x-tivo-mpeg"
-        tsn = handler.headers.getheader("tsn", "")
+        tsn = handler.headers.get("tsn", "")
         try:
             assert tsn
             tivo_name = config.tivos[tsn].get("name", tsn)
@@ -98,12 +104,14 @@ class Video(Plugin):
         )
 
         try:  # "bytes=XXX-"
-            offset = int(handler.headers.getheader("Range")[6:-1])
+            offset = int(handler.headers.get("Range")[6:-1])
         except:
             offset = 0
 
         if needs_tivodecode:
-            valid = bool(config.get_bin("tivodecode") and config.get_server("tivo_mak"))
+            valid = bool(
+                config.get_bin("tivodecode") and config.get_server("tivo_mak", "")
+            )
         else:
             valid = True
 
@@ -114,14 +122,13 @@ class Video(Plugin):
 
         # faking = (mime in ['video/x-tivo-mpeg-ts', 'video/x-tivo-mpeg'] and
         faking = mime == "video/x-tivo-mpeg" and not (is_tivo_file and compatible)
-        fname = str(path, "utf-8")
-        thead = ""
+        thead = b""
         if faking:
             thead = self.tivo_header(tsn, path, mime)
         if compatible:
-            size = os.path.getsize(fname) + len(thead)
+            size = os.path.getsize(path) + len(thead)
             handler.send_response(200)
-            handler.send_header("Content-Length", size - offset)
+            handler.send_header("Content-Length", str(size - offset))
             handler.send_header(
                 "Content-Range", "bytes %d-%d/%d" % (offset, size - offset - 1, size)
             )
@@ -133,7 +140,7 @@ class Video(Plugin):
 
         logger.info(
             '[%s] Start sending "%s" to %s'
-            % (time.strftime("%d/%b/%Y %H:%M:%S"), fname, tivo_name)
+            % (time.strftime("%d/%b/%Y %H:%M:%S"), path, tivo_name)
         )
         start = time.time()
         count = 0
@@ -142,8 +149,8 @@ class Video(Plugin):
             if compatible:
                 if faking and not offset:
                     handler.wfile.write(thead)
-                logger.debug('"%s" is tivo compatible' % fname)
-                f = open(fname, "rb")
+                logger.debug('"%s" is tivo compatible' % path)
+                f = open(path, "rb")
                 try:
                     if offset:
                         offset -= len(thead)
@@ -158,14 +165,14 @@ class Video(Plugin):
                     logger.info(msg)
                 f.close()
             else:
-                logger.debug('"%s" is not tivo compatible' % fname)
+                logger.debug('"%s" is not tivo compatible' % path)
                 if offset:
                     count = transcode.resume_transfer(path, handler.wfile, offset)
                 else:
                     count = transcode.transcode(path, handler.wfile, tsn, mime, thead)
         try:
             if not compatible:
-                handler.wfile.write("0\r\n\r\n")
+                handler.wfile.write(b"0\r\n\r\n")
             handler.wfile.flush()
         except Exception as msg:
             logger.info(msg)
@@ -176,16 +183,15 @@ class Video(Plugin):
         rate = count * 8.0 / mega_elapsed
         logger.info(
             '[%s] Done sending "%s" to %s, %d bytes, %.2f Mb/s'
-            % (time.strftime("%d/%b/%Y %H:%M:%S"), fname, tivo_name, count, rate)
+            % (time.strftime("%d/%b/%Y %H:%M:%S"), path, tivo_name, count, rate)
         )
 
-    def __duration(self, full_path):
-        return transcode.video_info(full_path)["millisecs"]
+    def __duration(self, full_path: str) -> Optional[int]:
+        return transcode.video_info(full_path).millisecs
 
-    def __total_items(self, full_path):
+    def __total_items(self, full_path: str) -> int:
         count = 0
         try:
-            full_path = str(full_path, "utf-8")
             for f in os.listdir(full_path):
                 if f.startswith("."):
                     continue
@@ -244,7 +250,7 @@ class Video(Plugin):
                 transcode_options = []
             else:
                 transcode_options = transcode.transcode_settings(
-                    True, full_path, "", tsn, mime
+                    True, full_path, tsn, mime
                 )
             # TODO 20191125: vInfo has no method items(), fix
             data["vHost"] = (
@@ -301,7 +307,7 @@ class Video(Plugin):
         return data
 
     def QueryContainer(self, handler, query):
-        tsn = handler.headers.getheader("tsn", "")
+        tsn = handler.headers.get("tsn", "")
         subcname = query["Container"][0]
 
         if not self.get_local_path(handler, query):
@@ -447,7 +453,7 @@ class Video(Plugin):
         )
 
     def TVBusQuery(self, handler, query):
-        tsn = handler.headers.getheader("tsn", "")
+        tsn = handler.headers.get("tsn", "")
         f = query["File"][0]
         path = self.get_local_path(handler, query)
         file_path = os.path.normpath(path + "/" + f)
