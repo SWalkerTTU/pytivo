@@ -1,4 +1,5 @@
 check for / division that used to be integer and now needs to be //
 check all Any types to see if they can be more specific
+    change Dict[str,Any] to NamedTuple
 check all encoding/decoding for proper (e.g. "utf-8"?)
 get_server, maybe replace arguments not used in every plugin with *args?
