@@ -46,10 +46,10 @@ class VideoInfo(NamedTuple):
     aCh: Optional[int] = None  # number of audio channels
     aCodec: Optional[str] = None  # audio codec
     aFreq: Optional[str] = None  # audio sample rate, number in string?
-    aKbps: Optional[str] = None  # but always cast to int
+    aKbps: Optional[int] = None  # but always cast to int
     container: Optional[str] = None  # av container file format
     dar1: Optional[str] = None  # Desired? Aspect Ratio
-    kbps: Optional[str] = None  # but always used as int
+    kbps: Optional[int] = None  # but always used as int
     mapAudio: Optional[List[Tuple[str, str]]] = None
     mapVideo: Optional[str] = None
     millisecs: Optional[int] = None  # ffmpeg Override_millisecs (maybe float?)
@@ -297,7 +297,7 @@ def select_audiocodec(
                     aCh = vInfoQuery.aCh
             else:
                 codec = "TBA"
-        if aKbps and int(aKbps) <= config.getMaxAudioBR(tsn):
+        if aKbps and aKbps <= config.getMaxAudioBR(tsn):
             # compatible codec and bitrate, do not reencode audio
             codec = "copy"
         if vInfo.aCodec != "ac3" and (aCh is None or aCh > 2):
@@ -404,14 +404,14 @@ def select_videostr(inFile: str, tsn: str, mime: str = "") -> int:
     vInfo = video_info(inFile)
     if tivo_compatible_video(vInfo, tsn, mime)[0] and vInfo.kbps is not None:
         # TODO: tivo_compatible_video checks that vInfo.kbps is not None
-        video_str = int(vInfo.kbps)
+        video_str = vInfo.kbps
         if vInfo.aKbps is not None:
-            video_str -= int(vInfo.aKbps)
+            video_str -= vInfo.aKbps
         video_str *= 1000
     else:
         video_str = config.strtod(config.getVideoBR(tsn))
         if config.isHDtivo(tsn) and vInfo.kbps:
-            video_str = max(video_str, int(vInfo.kbps) * 1000)
+            video_str = max(video_str, vInfo.kbps * 1000)
         video_str = int(min(config.strtod(config.getMaxVideoBR(tsn)) * 0.95, video_str))
     return video_str
 
@@ -446,6 +446,10 @@ def select_format(tsn: str, mime: str) -> List[str]:
 def pad_TB(
     tivo_width: int, tivo_height: int, multiplier: float, vInfo: VideoInfo
 ) -> List[str]:
+    if vInfo.vHeight is None or vInfo.vWidth is None:
+        LOGGER.error("Internal Error: vInfo.vHeight is None or vInfo.vHeight is None.")
+        return ["-vf", "scale=0:0,pad=0:0:0:0"]
+
     endHeight = int(((tivo_width * vInfo.vHeight) / vInfo.vWidth) * multiplier)
     if endHeight % 2:
         endHeight -= 1
@@ -462,6 +466,10 @@ def pad_TB(
 def pad_LR(
     tivo_width: int, tivo_height: int, multiplier: float, vInfo: VideoInfo
 ) -> List[str]:
+    if vInfo.vHeight is None or vInfo.vWidth is None:
+        LOGGER.error("Internal Error: vInfo.vHeight is None or vInfo.vHeight is None.")
+        return ["-vf", "scale=0:0,pad=0:0:0:0"]
+
     endWidth = int((tivo_height * vInfo.vWidth) / (vInfo.vHeight * multiplier))
     if endWidth % 2:
         endWidth -= 1
@@ -490,6 +498,10 @@ def select_aspect(inFile: str, tsn: str = "") -> List[str]:
     optres = config.getOptres(tsn)
 
     LOGGER.debug("optres: %s" % optres)
+
+    if vInfo.vHeight is None or vInfo.vWidth is None:
+        LOGGER.error("Internal Error: vInfo.vHeight is None or vInfo.vHeight is None.")
+        return []
 
     if optres:
         optHeight = config.nearestTivoHeight(vInfo.vHeight)
@@ -661,10 +673,9 @@ def tivo_compatible_video(
     if codec not in ("mpeg2video", "mpeg1video"):
         return (False, "vCodec %s not compatible" % codec)
 
-    if vInfo.kbps is not kone:
-        abit = max("0", vInfo.aKbps)
+    if vInfo.kbps is not None and vInfo.aKbps is not None:
         if (
-            int(vInfo.kbps) - int(abit)
+            vInfo.kbps - max(0, vInfo.aKbps)
             > config.strtod(config.getMaxVideoBR(tsn)) / 1000
         ):
             return (False, "%s kbps exceeds max video bitrate" % vInfo.kbps)
@@ -732,7 +743,10 @@ def tivo_compatible_audio(
 
         audio_lang = config.get_tsn("audio_lang", tsn)
         if audio_lang:
-            if vInfo.mapAudio[0][0] != select_audiolang(inFile, tsn)[-3:]:
+            if (
+                vInfo.mapAudio is None
+                or vInfo.mapAudio[0][0] != select_audiolang(inFile, tsn)[-3:]
+            ):
                 message = (False, "%s preferred audio track exists" % audio_lang)
         break
 
@@ -854,7 +868,10 @@ def video_info(inFile: str, cache: bool = True) -> VideoInfo:
         rezre = re.compile(attrs[attr])
         x = rezre.search(output)
         if x:
-            vInfo[attr] = x.group(1)
+            if attr in ["aKbps"]:
+                vInfo[attr] = int(x.group(1))
+            else:
+                vInfo[attr] = x.group(1)
         else:
             if attr in ["container", "vCodec"]:
                 vInfo[attr] = ""
@@ -940,7 +957,7 @@ def video_info(inFile: str, cache: bool = True) -> VideoInfo:
     rezre = re.compile(r".*bitrate: (.+) (?:kb/s).*")
     x = rezre.search(output)
     if x:
-        vInfo["kbps"] = x.group(1)
+        vInfo["kbps"] = int(x.group(1))
     else:
         # Fallback method of getting video bitrate
         # Sample line:  Stream #0.0[0x1e0]: Video: mpeg2video, yuv420p,
@@ -951,7 +968,7 @@ def video_info(inFile: str, cache: bool = True) -> VideoInfo:
         )
         x = rezre.search(output)
         if x:
-            vInfo["kbps"] = x.group(1)
+            vInfo["kbps"] = int(x.group(1))
         else:
             vInfo["kbps"] = None
             LOGGER.debug("failed at kbps")
@@ -1039,8 +1056,12 @@ def audio_check(inFile: str, tsn: str) -> Optional[VideoInfo]:
         + select_audiolang(inFile, tsn)
         + " -t 00:00:01 -f vob -"
     )
-    # TODO 20191125: fail with error if can't find ffmpeg
-    cmd = [config.get_bin("ffmpeg"), "-i", inFile] + cmd_string.split()
+    ffmpeg_bin = config.get_bin("ffmpeg")
+    if ffmpeg_bin is None:
+        LOGGER.error("Can't locate ffmpeg binary.")
+        return None
+
+    cmd = [ffmpeg_bin, "-i", inFile] + cmd_string.split()
     ffmpeg = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     fd, testname = tempfile.mkstemp()
     testfile = os.fdopen(fd, "wb")
@@ -1089,9 +1110,11 @@ def kill(popen: subprocess.Popen) -> None:
 def win32kill(pid: int) -> None:
     import ctypes
 
-    handle = ctypes.windll.kernel32.OpenProcess(1, False, pid)
-    ctypes.windll.kernel32.TerminateProcess(handle, -1)
-    ctypes.windll.kernel32.CloseHandle(handle)
+    # We ignore types for the next 3 lines so that the absence of windll
+    #   on non-Windows platforms is not flagged as an error
+    handle = ctypes.windll.kernel32.OpenProcess(1, False, pid)  # type: ignore
+    ctypes.windll.kernel32.TerminateProcess(handle, -1)  # type: ignore
+    ctypes.windll.kernel32.CloseHandle(handle)  # type: ignore
 
 
 def gcd(a: int, b: int) -> int:
