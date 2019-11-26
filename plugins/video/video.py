@@ -222,7 +222,11 @@ class Video(Plugin):
             return int((self.__duration(full_path) / 1000) * (bitrate * 1.02 / 8))
 
     def metadata_full(
-        self, full_path: str, tsn: str = "", mime: str = "", mtime: Optional[float] = None
+        self,
+        full_path: str,
+        tsn: str = "",
+        mime: str = "",
+        mtime: Optional[float] = None,
     ) -> Dict[str, Any]:
         data: Dict[str, Any] = {}
         vInfo = transcode.video_info(full_path)
@@ -231,8 +235,8 @@ class Video(Plugin):
             LOGGER.error("vInfo.vHeight or vInfo.vWidth is None")
             return data
 
-        if (vInfo.vHeight >= 720 and config.getTivoHeight >= 720) or (
-            vInfo.vWidth >= 1280 and config.getTivoWidth >= 1280
+        if (vInfo.vHeight >= 720 and config.getTivoHeight(tsn) >= 720) or (
+            vInfo.vWidth >= 1280 and config.getTivoWidth(tsn) >= 1280
         ):
             data["showingBits"] = "4096"
 
@@ -289,6 +293,10 @@ class Video(Plugin):
                     )
 
         duration = self.__duration(full_path)
+        if duration is None:
+            LOGGER.error("duration is None")
+            return data
+
         duration_delta = timedelta(milliseconds=duration)
         min = duration_delta.seconds / 60
         sec = duration_delta.seconds % 60
