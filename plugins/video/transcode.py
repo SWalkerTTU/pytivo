@@ -652,8 +652,7 @@ def tivo_compatible_video(
         return message
 
     if codec not in ("mpeg2video", "mpeg1video"):
-        message = (False, "vCodec %s not compatible" % codec)
-        return message
+        return (False, "vCodec %s not compatible" % codec)
 
     if vInfo.kbps is not None:
         abit = max("0", vInfo.aKbps)
@@ -661,29 +660,25 @@ def tivo_compatible_video(
             int(vInfo.kbps) - int(abit)
             > config.strtod(config.getMaxVideoBR(tsn)) / 1000
         ):
-            message = (False, "%s kbps exceeds max video bitrate" % vInfo.kbps)
-            return message
+            return (False, "%s kbps exceeds max video bitrate" % vInfo.kbps)
     else:
-        message = (False, "%s kbps not supported" % vInfo.kbps)
-        return message
+        return (False, "%s kbps not supported" % vInfo.kbps)
 
     if config.isHDtivo(tsn):
         # HD Tivo detected, skipping remaining tests.
         return message
 
     if not vInfo.vFps in ["29.97", "59.94"]:
-        message = (False, "%s vFps, should be 29.97" % vInfo.vFps)
-        return message
+        return (False, "%s vFps, should be 29.97" % vInfo.vFps)
 
     if (config.get169Blacklist(tsn) and not config.get169Setting(tsn)) or (
         config.get169Letterbox(tsn) and config.get169Setting(tsn)
     ):
         if vInfo.dar1 and vInfo.dar1 not in ("4:3", "8:9", "880:657"):
-            message = (
+            return (
                 False,
                 ("DAR %s not supported " + "by BLACKLIST_169 tivos") % vInfo.dar1,
             )
-            return message
 
     mode = (vInfo.vWidth, vInfo.vHeight)
     if mode not in [
