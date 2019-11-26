@@ -186,7 +186,7 @@ class Video(Plugin):
             % (time.strftime("%d/%b/%Y %H:%M:%S"), path, tivo_name, count, rate)
         )
 
-    def __duration(self, full_path: str) -> Optional[int]:
+    def __duration(self, full_path: str) -> Optional[float]:
         return transcode.video_info(full_path).millisecs
 
     def __total_items(self, full_path: str) -> int:
@@ -221,12 +221,14 @@ class Video(Plugin):
             bitrate = audioBPS + videoBPS
             return int((self.__duration(full_path) / 1000) * (bitrate * 1.02 / 8))
 
-    def metadata_full(self, full_path, tsn="", mime="", mtime=None):
-        data = {}
+    def metadata_full(
+        self, full_path: str, tsn: str = "", mime: str = "", mtime: Optional[float] = None
+    ) -> Dict[str, Any]:
+        data: Dict[str, Any] = {}
         vInfo = transcode.video_info(full_path)
 
-        if (int(vInfo.vHeight) >= 720 and config.getTivoHeight >= 720) or (
-            int(vInfo.vWidth) >= 1280 and config.getTivoWidth >= 1280
+        if (vInfo.vHeight >= 720 and config.getTivoHeight >= 720) or (
+            vInfo.vWidth >= 1280 and config.getTivoWidth >= 1280
         ):
             data["showingBits"] = "4096"
 
@@ -246,12 +248,11 @@ class Video(Plugin):
         if config.getDebug() and "vHost" not in data:
             compatible, reason = transcode.tivo_compatible(full_path, tsn, mime)
             if compatible:
-                transcode_options = []
+                transcode_options: List[str] = []
             else:
                 transcode_options = transcode.transcode_settings(
                     True, full_path, tsn, mime
                 )
-            # TODO 20191125: vInfo has no method items(), fix
             data["vHost"] = (
                 ["TRANSCODE=%s, %s" % (["YES", "NO"][compatible], reason)]
                 + ["SOURCE INFO: "]
@@ -268,7 +269,7 @@ class Video(Plugin):
         if "time" in data:
             if data["time"].lower() == "file":
                 if not mtime:
-                    mtime = os.path.getmtime(str(full_path, "utf-8"))
+                    mtime = os.path.getmtime(full_path)
                 try:
                     now = datetime.utcfromtimestamp(mtime)
                 except:

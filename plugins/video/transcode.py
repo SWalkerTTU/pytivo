@@ -53,7 +53,7 @@ class VideoInfo(NamedTuple):
     kbps: Optional[int] = None  # but always used as int
     mapAudio: Optional[List[Tuple[str, str]]] = None
     mapVideo: Optional[str] = None
-    millisecs: Optional[int] = None  # duration? ffmpeg Override_millisecs
+    millisecs: Optional[float] = None  # duration? ffmpeg Override_millisecs
     par: Optional[str] = None  # string version of float? "1.232"?
     par1: Optional[str] = None  # string version e.g. "4:3"
     par2: Optional[float] = None  # float version of ratio
