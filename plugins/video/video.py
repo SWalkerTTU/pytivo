@@ -68,7 +68,15 @@ def isogm(iso: str) -> int:
     return int(calendar.timegm(uniso(iso)))
 
 
+def pad(length: int, align: int) -> int:
+    extra = length % align
+    if extra:
+        extra = align - extra
+    return extra
+
+
 # TODO 20191125: can probably be replaced with NamedTuple
+# dict, but with specific defaults for certain keys
 class VideoDetails(MutableMapping):
     def __init__(self, d=None):
         if d:
@@ -449,7 +457,7 @@ class Video(Plugin):
         t.tivos = config.tivos
         handler.send_xml(str(t))
 
-    def use_ts(self, tsn, file_path):
+    def use_ts(self, tsn: str, file_path: str) -> bool:
         if config.is_ts_capable(tsn):
             ext = os.path.splitext(file_path)[1].lower()
             if ext == ".tivo":
@@ -469,7 +477,8 @@ class Video(Plugin):
 
         return False
 
-    def get_details_xml(self, tsn, file_path):
+    def get_details_xml(self, tsn: str, file_path: str) -> str:
+        details: str
         if (tsn, file_path) in self.tvbus_cache:
             details = self.tvbus_cache[(tsn, file_path)]
         else:
@@ -489,37 +498,31 @@ class Video(Plugin):
             self.tvbus_cache[(tsn, file_path)] = details
         return details
 
-    def tivo_header(self, tsn, path, mime):
-        def pad(length, align):
-            extra = length % align
-            if extra:
-                extra = align - extra
-            return extra
-
+    def tivo_header(self, tsn: str, path: str, mime: str) -> bytes:
         if mime == "video/x-tivo-mpeg-ts":
             flag = 45
         else:
             flag = 13
-        details = self.get_details_xml(tsn, path)
+        details = self.get_details_xml(tsn, path).encode("utf-8")
         ld = len(details)
-        chunk = details + "\0" * (pad(ld, 4) + 4)
+        chunk = details + b"\0" * (pad(ld, 4) + 4)
         lc = len(chunk)
         blocklen = lc * 2 + 40
         padding = pad(blocklen, 1024)
 
-        return "".join(
+        return b"".join(
             [
-                "TiVo",
+                b"TiVo",
                 struct.pack(">HHHLH", 4, flag, 0, padding + blocklen, 2),
                 struct.pack(">LLHH", lc + 12, ld, 1, 0),
                 chunk,
                 struct.pack(">LLHH", lc + 12, ld, 2, 0),
                 chunk,
-                "\0" * padding,
+                b"\0" * padding,
             ]
         )
 
-    def TVBusQuery(self, handler, query):
+    def TVBusQuery(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
         tsn = handler.headers.get("tsn", "")
         f = query["File"][0]
         path = self.get_local_path(handler, query)

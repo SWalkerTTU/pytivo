@@ -322,10 +322,12 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.flush()
 
     def send_xml(self, page: str) -> None:
-        self.send_fixed(page.encode(), "text/xml")
+        # use page: str because Cheetah outputs unicode str
+        self.send_fixed(page.encode("utf-8"), "text/xml")
 
     def send_html(self, page: str, code: int = 200, refresh: str = "") -> None:
-        self.send_fixed(page.encode(), "text/html; charset=utf-8", code, refresh)
+        # use page: str because Cheetah outputs unicode str
+        self.send_fixed(page.encode("utf-8"), "text/html; charset=utf-8", code, refresh)
 
     def root_container(self) -> None:
         tsn = self.headers.get("TiVo_TCD_ID", "")
