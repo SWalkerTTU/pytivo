@@ -80,14 +80,9 @@ class VideoInfo(NamedTuple):
 #    patchSubprocess()
 
 
-def transcode(
-    isQuery: bool,
-    inFile: str,
-    outFile: BinaryIO,
-    tsn: str = "",
-    mime: str = "",
-    thead: str = "",
-) -> Union[List[str], int]:
+def transcode_query(
+    inFile: str, outFile: BinaryIO, tsn: str = "", mime: str = "", thead: str = ""
+) -> List[str]:
     vcodec = select_videocodec(inFile, tsn, mime)
 
     settings = select_buffsize(tsn) + vcodec
@@ -113,8 +108,15 @@ def transcode(
     settings += select_format(tsn, mime)
 
     settings = " ".join(settings).split()
-    if isQuery:
-        return settings
+    return settings
+
+
+def transcode(
+    inFile: str, outFile: BinaryIO, tsn: str = "", mime: str = "", thead: str = ""
+) -> int:
+    settings = transcode_query(
+        inFile=inFile, outFile=outFile, tsn=tsn, mime=mime, thead=thead
+    )
 
     ffmpeg_path = config.get_bin("ffmpeg")
     if ffmpeg_path is None:
@@ -395,10 +397,10 @@ def select_videobr(inFile: str, tsn: str, mime: str = "") -> List[str]:
 
 def select_videostr(inFile: str, tsn: str, mime: str = "") -> int:
     vInfo = video_info(inFile)
-    if tivo_compatible_video(vInfo, tsn, mime)[0]:
+    if tivo_compatible_video(vInfo, tsn, mime)[0] and vInfo.kbps is not None:
         # TODO: tivo_compatible_video checks that vInfo.kbps is not None
         video_str = int(vInfo.kbps)
-        if vInfo.aKbps:
+        if vInfo.aKbps is not None:
             video_str -= int(vInfo.aKbps)
         video_str *= 1000
     else:
@@ -654,7 +656,7 @@ def tivo_compatible_video(
     if codec not in ("mpeg2video", "mpeg1video"):
         return (False, "vCodec %s not compatible" % codec)
 
-    if vInfo.kbps is not None:
+    if vInfo.kbps is not kone:
         abit = max("0", vInfo.aKbps)
         if (
             int(vInfo.kbps) - int(abit)
@@ -799,10 +801,10 @@ def video_info(inFile: str, cache: bool = True) -> VideoInfo:
         ]:
             vInfo["Supported"] = False
         vInfo.update({"millisecs": 0, "vWidth": 704, "vHeight": 480, "rawmeta": {}})
-        video_info = VideoInfo(**vInfo)
+        vid_info = VideoInfo(**vInfo)
         if cache:
-            INFO_CACHE[inFile] = (mtime, video_info)
-        return video_info
+            INFO_CACHE[inFile] = (mtime, vid_info)
+        return vid_info
 
     cmd = [ffmpeg_path, "-i", inFile]
     # Windows and other OS buffer 4096 and ffmpeg can output more than that.
@@ -822,10 +824,10 @@ def video_info(inFile: str, cache: bool = True) -> VideoInfo:
         if ffmpeg.poll() is None:
             kill(ffmpeg)
             vInfo["Supported"] = False
-            video_info = VideoInfo(**vInfo)
+            vid_info = VideoInfo(**vInfo)
             if cache:
-                INFO_CACHE[inFile] = (mtime, video_info)
-            return video_info
+                INFO_CACHE[inFile] = (mtime, vid_info)
+            return vid_info
     else:
         ffmpeg.wait()
 
@@ -1020,10 +1022,10 @@ def video_info(inFile: str, cache: bool = True) -> VideoInfo:
     if cache:
         INFO_CACHE[inFile] = (mtime, vInfo)
     LOGGER.debug("; ".join(["%s=%s" % (k, v) for k, v in list(vInfo.items())]))
-    video_info = VideoInfo(**vInfo)
+    vid_info = VideoInfo(**vInfo)
     if cache:
-        INFO_CACHE[inFile] = (mtime, video_info)
-    return video_info
+        INFO_CACHE[inFile] = (mtime, vid_info)
+    return vid_info
 
 
 def audio_check(inFile: str, tsn: str) -> Optional[VideoInfo]:

@@ -162,9 +162,7 @@ class Video(Plugin):
                 if offset:
                     count = transcode.resume_transfer(path, handler.wfile, offset)
                 else:
-                    count = transcode.transcode(
-                        False, path, handler.wfile, tsn, mime, thead
-                    )
+                    count = transcode.transcode(path, handler.wfile, tsn, mime, thead)
         try:
             if not compatible:
                 handler.wfile.write("0\r\n\r\n")
@@ -222,8 +220,8 @@ class Video(Plugin):
         data = {}
         vInfo = transcode.video_info(full_path)
 
-        if (int(vInfo["vHeight"]) >= 720 and config.getTivoHeight >= 720) or (
-            int(vInfo["vWidth"]) >= 1280 and config.getTivoWidth >= 1280
+        if (int(vInfo.vHeight) >= 720 and config.getTivoHeight >= 720) or (
+            int(vInfo.vWidth) >= 1280 and config.getTivoWidth >= 1280
         ):
             data["showingBits"] = "4096"
 
@@ -231,7 +229,7 @@ class Video(Plugin):
         if full_path[-5:].lower() == ".tivo":
             data.update(metadata.from_tivo(full_path))
         if full_path[-4:].lower() == ".wtv":
-            data.update(metadata.from_mscore(vInfo["rawmeta"]))
+            data.update(metadata.from_mscore(vInfo.rawmeta))
 
         if "episodeNumber" in data:
             try:
@@ -245,7 +243,8 @@ class Video(Plugin):
             if compatible:
                 transcode_options = []
             else:
-                transcode_options = transcode.transcode(True, full_path, "", tsn, mime)
+                transcode_options = transcode.transcode_query(full_path, "", tsn, mime)
+            # TODO 20191125: vInfo has no method items(), fix
             data["vHost"] = (
                 ["TRANSCODE=%s, %s" % (["YES", "NO"][compatible], reason)]
                 + ["SOURCE INFO: "]
