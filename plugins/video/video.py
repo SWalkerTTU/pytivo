@@ -252,7 +252,7 @@ class Video(Plugin):
                 + ["SOURCE INFO: "]
                 + [
                     "%s=%s" % (k, v)
-                    for k, v in sorted(list(vInfo.items()), reverse=True)
+                    for k, v in sorted(list(vInfo._asdict().items()), reverse=True)
                 ]
                 + ["TRANSCODE OPTIONS: "]
                 + transcode_options

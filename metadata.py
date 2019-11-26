@@ -894,5 +894,5 @@ if __name__ == "__main__":
             metadata.update(from_dvrms(fname))
         elif ext == ".wtv":
             vInfo = plugins.video.transcode.video_info(fname)
-            metadata.update(from_mscore(vInfo["rawmeta"]))
+            metadata.update(from_mscore(vInfo.rawmeta))
         dump(sys.stdout, metadata)
