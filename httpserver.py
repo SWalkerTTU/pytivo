@@ -10,7 +10,7 @@ import socket
 import time
 from io import StringIO, BytesIO
 from email.utils import formatdate
-from urllib.parse import unquote_plus, quote
+from urllib.parse import unquote_plus, quote, parse_qs
 from xml.sax.saxutils import escape
 from typing import Dict, Any, Optional, List, Tuple
 
@@ -124,7 +124,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
 
         if "?" in self.path:
             path, opts = self.path.split("?", 1)
-            query = cgi.parse_qs(opts)
+            query = parse_qs(opts)
         else:
             path = self.path
             query = {}
@@ -151,7 +151,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         else:
             length = int(self.headers.get("content-length"))
             qs = self.rfile.read(length).decode("utf-8")
-            query = cgi.parse_qs(qs, keep_blank_values=True)
+            query = parse_qs(qs, keep_blank_values=True)
         self.handle_query(query, tsn)
 
     def do_command(
