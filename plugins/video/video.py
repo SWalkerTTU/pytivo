@@ -7,7 +7,7 @@ import _thread
 import time
 import urllib.request, urllib.parse, urllib.error
 import zlib
-from collections import MutableMapping
+from collections.abc import MutableMapping
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional, List, Dict, Any
 from xml.sax.saxutils import escape
@@ -66,6 +66,57 @@ def isodt(iso: str) -> datetime:
 
 def isogm(iso: str) -> int:
     return int(calendar.timegm(uniso(iso)))
+
+
+# TODO 20191125: can probably be replaced with NamedTuple
+class VideoDetails(MutableMapping):
+    def __init__(self, d=None):
+        if d:
+            self.d = d
+        else:
+            self.d = {}
+
+    def __getitem__(self, key):
+        if key not in self.d:
+            self.d[key] = self.default(key)
+        return self.d[key]
+
+    def __contains__(self, key):
+        return True
+
+    def __setitem__(self, key, value):
+        self.d[key] = value
+
+    def __delitem__(self):
+        del self.d[key]
+
+    def keys(self):
+        return list(self.d.keys())
+
+    def __iter__(self):
+        return self.d.__iter__()
+
+    def __len__(self):
+        return len(self.d)
+
+    def iteritems(self):
+        return iter(self.d.items())
+
+    def default(self, key):
+        defaults = {
+            "showingBits": "0",
+            "displayMajorNumber": "0",
+            "displayMinorNumber": "0",
+            "isEpisode": "true",
+            "colorCode": "4",
+            "showType": ("SERIES", "5"),
+        }
+        if key in defaults:
+            return defaults[key]
+        elif key.startswith("v"):
+            return []
+        else:
+            return ""
 
 
 class Video(Plugin):
@@ -208,18 +259,22 @@ class Video(Plugin):
             pass
         return count
 
-    def __est_size(self, full_path, tsn="", mime=""):
+    def __est_size(self, full_path: str, tsn: str = "", mime: str = "") -> int:
         # Size is estimated by taking audio and video bit rate adding 2%
 
         if transcode.tivo_compatible(full_path, tsn, mime)[0]:
-            return os.path.getsize(str(full_path, "utf-8"))
+            return os.path.getsize(full_path)
         else:
             # Must be re-encoded
             audioBPS = config.getMaxAudioBR(tsn) * 1000
             # audioBPS = config.strtod(config.getAudioBR(tsn))
             videoBPS = transcode.select_videostr(full_path, tsn)
             bitrate = audioBPS + videoBPS
-            return int((self.__duration(full_path) / 1000) * (bitrate * 1.02 / 8))
+            duration = self.__duration(full_path)
+            if duration is None:
+                LOGGER.error("self.__duration(%s) is None", full_path)
+                duration = 0
+            return int((duration / 1000) * (bitrate * 1.02 / 8))
 
     def metadata_full(
         self,
@@ -318,7 +373,7 @@ class Video(Plugin):
 
         return data
 
-    def QueryContainer(self, handler, query):
+    def QueryContainer(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
         tsn = handler.headers.get("tsn", "")
         subcname = query["Container"][0]
 
@@ -473,50 +528,3 @@ class Video(Plugin):
         details = self.get_details_xml(tsn, file_path)
 
         handler.send_xml(details)
-
-
-class VideoDetails(MutableMapping):
-    def __init__(self, d=None):
-        if d:
-            self.d = d
-        else:
-            self.d = {}
-
-    def __getitem__(self, key):
-        if key not in self.d:
-            self.d[key] = self.default(key)
-        return self.d[key]
-
-    def __contains__(self, key):
-        return True
-
-    def __setitem__(self, key, value):
-        self.d[key] = value
-
-    def __delitem__(self):
-        del self.d[key]
-
-    def keys(self):
-        return list(self.d.keys())
-
-    def __iter__(self):
-        return self.d.__iter__()
-
-    def iteritems(self):
-        return iter(self.d.items())
-
-    def default(self, key):
-        defaults = {
-            "showingBits": "0",
-            "displayMajorNumber": "0",
-            "displayMinorNumber": "0",
-            "isEpisode": "true",
-            "colorCode": "4",
-            "showType": ("SERIES", "5"),
-        }
-        if key in defaults:
-            return defaults[key]
-        elif key.startswith("v"):
-            return []
-        else:
-            return ""
