@@ -94,7 +94,7 @@ def transcode_query(
             + select_aspect(inFile, tsn)
         )
 
-    acodec = select_audiocodec(isQuery, inFile, tsn)
+    acodec = select_audiocodec(True, inFile, tsn)
     settings += acodec
     if not acodec[1] == "copy":
         settings += (
