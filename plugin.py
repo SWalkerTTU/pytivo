@@ -29,7 +29,7 @@ def build_recursive_list(
     path: str,
     recurse: bool = True,
     filterFunction: Optional[Callable] = None,
-    file_type: Optional[str] = None,
+    file_type: str = "",
 ) -> List[FileData]:
     files = []
     try:
@@ -43,7 +43,7 @@ def build_recursive_list(
                     build_recursive_list(f, recurse, filterFunction, file_type)
                 )
             else:
-                if filterFunction is None or filterFunction(f, file_type):
+                if filterFunction=="" or filterFunction(f, file_type):
                     files.append(FileData(f, isdir))
     except:
         print(f"build_recursive_list() Exception", file=sys.stderr)
