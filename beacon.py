@@ -6,7 +6,7 @@ import time
 import uuid
 from threading import Timer
 from urllib.parse import quote
-from typing import List, Any, Dict, Optional
+from typing import List, Dict, Optional
 
 import zeroconf
 
@@ -93,7 +93,7 @@ class ZCBroadcast:
         # Give them a second to respond
         time.sleep(1)
 
-        # Any results?
+        # any results?
         if names:
             config.tivos_found = True
 
