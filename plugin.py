@@ -128,7 +128,6 @@ class Plugin:
         return os.path.normpath(handler.container["path"])
 
     def get_local_path(self, handler: "TivoHTTPHandler", query: Query) -> str:
-
         subcname = query["Container"][0]
 
         path = self.get_local_base_path(handler, query)

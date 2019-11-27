@@ -5,3 +5,4 @@ check all encoding/decoding for proper (e.g. "utf-8"?)
 get_server, maybe replace arguments not used in every plugin with *args?
 Change read-in string templates to Template(file=)
 Fix AudioFileFilter
+See if one can precompile Templates (without options)
