@@ -54,7 +54,7 @@ from Cheetah.Template import Template  # type: ignore
 
 import config
 from lrucache import LRUCache
-from plugin import Plugin, quote, unquote, build_recursive_list, SortList
+from plugin import Plugin, quote, unquote, build_recursive_list, SortList, read_tmpl
 from plugins.video.transcode import kill
 from pytivo_types import Query, FileData
 
@@ -97,12 +97,8 @@ exif_orient_m = re.compile("\x01\x12\x00\x03\x00\x00\x00\x01\x00(.)\x00\x00").se
 ffmpeg_size = re.compile(r".*Video: .+, (\d+)x(\d+)[, ].*")
 
 # Preload the template
-tname = os.path.join(SCRIPTDIR, "templates", "container.tmpl")
-iname = os.path.join(SCRIPTDIR, "templates", "item.tmpl")
-with open(tname, "r") as tname_fh:
-    PHOTO_TEMPLATE = tname_fh.read()
-with open(iname, "r") as iname_fh:
-    ITEM_TEMPLATE = iname_fh.read()
+PHOTO_TEMPLATE = read_tmpl(os.path.join(SCRIPTDIR, "templates", "container.tmpl"))
+ITEM_TEMPLATE = read_tmpl(os.path.join(SCRIPTDIR, "templates", "item.tmpl"))
 
 JFIF_TAG = b"\xff\xe0\x00\x10JFIF\x00\x01\x02\x00\x00\x01\x00\x01\x00\x00"
 

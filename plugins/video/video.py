@@ -18,7 +18,7 @@ from lrucache import LRUCache
 import config
 import metadata
 from . import transcode
-from plugin import Plugin, quote
+from plugin import Plugin, quote, read_tmpl
 from pytivo_types import Query
 
 if TYPE_CHECKING:
@@ -31,13 +31,8 @@ SCRIPTDIR = os.path.dirname(__file__)
 CLASS_NAME = "Video"
 
 # Preload the templates
-def tmpl(name):
-    with open(os.path.join(SCRIPTDIR, "templates", name), "r") as tmpl_fh:
-        return tmpl_fh.read()
-
-
-XML_CONTAINER_TEMPLATE = tmpl("container_xml.tmpl")
-TVBUS_TEMPLATE = tmpl("TvBus.tmpl")
+XML_CONTAINER_TEMPLATE = read_tmpl("container_xml.tmpl")
+TVBUS_TEMPLATE = read_tmpl("TvBus.tmpl")
 
 EXTENSIONS = """.tivo .mpg .avi .wmv .mov .flv .f4v .vob .mp4 .m4v .mkv
 .ts .tp .trp .3g2 .3gp .3gp2 .3gpp .amv .asf .avs .bik .bix .box .bsf

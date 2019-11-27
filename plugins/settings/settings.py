@@ -7,7 +7,7 @@ from Cheetah.Template import Template  # type: ignore
 
 from . import buildhelp
 import config
-from plugin import Plugin
+from plugin import Plugin, read_tmpl
 from pytivo_types import Query
 
 if TYPE_CHECKING:
@@ -31,9 +31,7 @@ saved to the pyTivo.conf file. However you may need to do a <b>Soft
 Reset</b> or <b>Restart</b> before these changes will take effect.</p>"""
 
 # Preload the templates
-tsname = os.path.join(SCRIPTDIR, "templates", "settings.tmpl")
-with open(tsname, "r") as settings_template_fh:
-    SETTINGS_TEMPLATE = settings_template_fh.read()
+SETTINGS_TEMPLATE = read_tmpl(os.path.join(SCRIPTDIR, "templates", "settings.tmpl"))
 
 
 class Settings(Plugin):

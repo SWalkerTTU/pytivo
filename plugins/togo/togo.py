@@ -16,7 +16,7 @@ from Cheetah.Template import Template  # type: ignore
 
 import config
 import metadata
-from plugin import Plugin
+from plugin import Plugin, read_tmpl
 from pytivo_types import Query
 
 if TYPE_CHECKING:
@@ -69,9 +69,7 @@ incorrect Media Access Key. Please return to the Settings page and
 double check your <b>tivo_mak</b> setting.</p> <pre>%s</pre>"""
 
 # Preload the templates
-tnname = os.path.join(SCRIPTDIR, "templates", "npl.tmpl")
-with open(tnname, "rb") as tnname_fh:
-    NPL_TEMPLATE = tnname_fh.read()
+NPL_TEMPLATE = read_tmpl(os.path.join(SCRIPTDIR, "templates", "npl.tmpl"))
 
 MSWINDOWS = sys.platform == "win32"
 

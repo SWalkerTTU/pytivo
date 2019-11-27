@@ -3,3 +3,4 @@ check all Any types to see if they can be more specific
     change Dict[str,Any] to NamedTuple
 check all encoding/decoding for proper (e.g. "utf-8"?)
 get_server, maybe replace arguments not used in every plugin with *args?
+Change read-in string templates to Template(file=)
