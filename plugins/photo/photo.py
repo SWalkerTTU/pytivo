@@ -104,6 +104,8 @@ JFIF_TAG = b"\xff\xe0\x00\x10JFIF\x00\x01\x02\x00\x00\x01\x00\x01\x00\x00"
 
 
 def ImageFileFilter(f: str, filter_type: Optional[str] = None) -> bool:
+    if os.path.isdir(f):
+        return True
     return os.path.splitext(f)[1].lower() in IMAGE_FILE_EXTS
 
 
@@ -537,13 +539,14 @@ class Photo(Plugin):
 
         if not filelist.files:
             filelist = SortListLock(
-                build_recursive_list(path, recurse, filterFunction, "")
+                build_recursive_list(path, recurse, filterFunction)
             )
 
             if recurse:
                 rc[path] = filelist
             else:
                 dc[path] = filelist
+        print([file.name for file in filelist.files])
 
         filelist.acquire()
 
@@ -596,6 +599,7 @@ class Photo(Plugin):
             filelist.unsorted = False
 
         files = filelist.files[:]
+        print([file.name for file in files])
 
         # Filter it -- this section needs work
         if "Filter" in query:
