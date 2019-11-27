@@ -872,7 +872,7 @@ def video_info(inFile: str, cache: bool = True) -> VideoInfo:
                 vInfo[attr] = ""
                 vInfo["Supported"] = False
             else:
-                vInfo["attr"] = None
+                vInfo[attr] = None
             LOGGER.debug("failed at " + attr)
 
     rezre = re.compile(
@@ -1074,7 +1074,8 @@ def audio_check(inFile: str, tsn: str) -> Optional[VideoInfo]:
 
 
 def supported_format(inFile: str) -> bool:
-    if video_info(inFile).Supported:
+    vInfo = video_info(inFile)
+    if vInfo.Supported:
         return True
     else:
         LOGGER.debug("FALSE, file not supported %s" % inFile)
