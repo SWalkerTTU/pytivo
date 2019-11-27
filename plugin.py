@@ -30,6 +30,16 @@ def no_anchor(handler: "TivoHTTPHandler", anchor: str) -> None:
     handler.server.logger.warning("Anchor not found: " + anchor)
 
 
+class FileData:
+    def __init__(self, name: str, isdir: bool) -> None:
+        self.name = name
+        self.isdir = isdir
+        st = os.stat(name)
+        self.mdate = st.st_mtime
+        self.cdate = st.st_ctime
+        self.size = st.st_size
+
+
 # TODO 20191125 Maybe omit file_type if no filter functions use it?
 def build_recursive_list(
     path: str,
@@ -72,16 +82,6 @@ def unquote(in_str: str) -> str:
 
 class Error:
     CONTENT_TYPE = "text/html"
-
-
-class FileData:
-    def __init__(self, name: str, isdir: bool) -> None:
-        self.name = name
-        self.isdir = isdir
-        st = os.stat(name)
-        self.mdate = st.st_mtime
-        self.cdate = st.st_ctime
-        self.size = st.st_size
 
 
 FileDataLike = TypeVar("FileDataLike", bound=FileData)
