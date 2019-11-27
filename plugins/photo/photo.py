@@ -601,8 +601,10 @@ class Photo(Plugin):
 
         # Filter it -- this section needs work
         if "Filter" in query:
-            usedir = "folder" in query["Filter"][0]
-            useimg = "image" in query["Filter"][0]
+            # e.g. "x-container/folder,image/*"
+            q_filter = query["Filter"][0]
+            usedir = "folder" in q_filter
+            useimg = "image" in q_filter
             if not usedir:
                 files = [x for x in files if not x.isdir]
             elif usedir and not useimg:

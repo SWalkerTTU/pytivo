@@ -380,6 +380,8 @@ class Video(Plugin):
     def QueryContainer(self, handler: "TivoHTTPHandler", query: Query) -> None:
         tsn = handler.headers.get("tsn", "")
         subcname = query["Container"][0]
+        # e.g. Filter =
+        #   "x-tivo-container/tivo-videos,x-tivo-container/folder,video/x-tivo-mpeg,video/*"
 
         if not self.get_local_path(handler, query):
             handler.send_error(404)
