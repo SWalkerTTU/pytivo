@@ -28,10 +28,27 @@ import metadata
 
 LOGGER = logging.getLogger("pyTivo.video.transcode")
 
+
+class FfmpegProcess:
+    def __init__(
+        self,
+        process: subprocess.Popen,
+        start: int,
+        end: int,
+        last_read: float,
+        blocks: List[bytes],
+    ):
+        self.process = process
+        self.start = start
+        self.end = end
+        self.last_read = last_read
+        self.blocks = blocks
+
+
 INFO_CACHE = lrucache.LRUCache(1000)
 # TODO 20191126: possibly make FFMPEG_PROCS a class to check heterogneous types
 #   see @dataclass in python 3.7+
-FFMPEG_PROCS: Dict[str, Dict[str, Any]] = {}
+FFMPEG_PROCS: Dict[str, FfmpegProcess] = {}
 REAPERS: Dict[str, Any] = {}
 
 GOOD_MPEG_FPS = ["23.98", "24.00", "25.00", "29.97", "30.00", "50.00", "59.94", "60.00"]
@@ -155,15 +172,11 @@ def transcode(
         LOGGER.debug("transcoding to tivo model " + tsn[:3] + " using ffmpeg command:")
         LOGGER.debug(" ".join(cmd))
 
-    FFMPEG_PROCS[inFile] = {
-        "process": ffmpeg,
-        "start": 0,
-        "end": 0,
-        "last_read": time.time(),
-        "blocks": [],
-    }
+    FFMPEG_PROCS[inFile] = FfmpegProcess(
+        process=ffmpeg, start=0, end=0, last_read=time.time(), blocks=[]
+    )
     if thead:
-        FFMPEG_PROCS[inFile]["blocks"].append(thead)
+        FFMPEG_PROCS[inFile].blocks.append(thead)
     reap_process(inFile)
     return resume_transfer(inFile, outFile, 0)
 
@@ -171,21 +184,21 @@ def transcode(
 def is_resumable(inFile: str, offset: int) -> bool:
     if inFile in FFMPEG_PROCS:
         proc = FFMPEG_PROCS[inFile]
-        if proc["start"] <= offset < proc["end"]:
+        if proc.start <= offset < proc.end:
             return True
         else:
             cleanup(inFile)
-            kill(proc["process"])
+            kill(proc.process)
     return False
 
 
 def resume_transfer(inFile: str, outFile: BinaryIO, offset: int) -> int:
     proc = FFMPEG_PROCS[inFile]
-    offset -= proc["start"]
+    offset -= proc.start
     count = 0
 
     try:
-        for block in proc["blocks"]:
+        for block in proc.blocks:
             length = len(block)
             if offset < length:
                 if offset > 0:
@@ -200,25 +213,25 @@ def resume_transfer(inFile: str, outFile: BinaryIO, offset: int) -> int:
         LOGGER.info(msg)
         return count
 
-    proc["start"] = proc["end"]
-    proc["blocks"] = []
+    proc.start = proc.end
+    proc.blocks = []
 
     return count + transfer_blocks(inFile, outFile)
 
 
 def transfer_blocks(inFile: str, outFile: BinaryIO) -> int:
     proc = FFMPEG_PROCS[inFile]
-    blocks = proc["blocks"]
+    blocks = proc.blocks
     count = 0
 
     while True:
         try:
-            block = proc["process"].stdout.read(BLOCKSIZE)
-            proc["last_read"] = time.time()
+            block = proc.process.stdout.read(BLOCKSIZE)
+            proc.last_read = time.time()
         except Exception as msg:
             LOGGER.info(msg)
             cleanup(inFile)
-            kill(proc["process"])
+            kill(proc.process)
             break
 
         if not block:
@@ -231,9 +244,9 @@ def transfer_blocks(inFile: str, outFile: BinaryIO) -> int:
             break
 
         blocks.append(block)
-        proc["end"] += len(block)
+        proc.end += len(block)
         if len(blocks) > MAXBLOCKS:
-            proc["start"] += len(blocks[0])
+            proc.start += len(blocks[0])
             blocks.pop(0)
 
         try:
@@ -251,10 +264,10 @@ def transfer_blocks(inFile: str, outFile: BinaryIO) -> int:
 def reap_process(inFile: str) -> None:
     if FFMPEG_PROCS and inFile in FFMPEG_PROCS:
         proc = FFMPEG_PROCS[inFile]
-        if proc["last_read"] + TIMEOUT < time.time():
+        if proc.last_read + TIMEOUT < time.time():
             del FFMPEG_PROCS[inFile]
             del REAPERS[inFile]
-            kill(proc["process"])
+            kill(proc.process)
         else:
             reaper = threading.Timer(TIMEOUT, reap_process, (inFile,))
             REAPERS[inFile] = reaper
