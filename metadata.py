@@ -9,7 +9,7 @@ import subprocess
 import sys
 from typing import Dict, Any, TextIO, Optional, List
 from datetime import datetime
-from xml.dom import Node, Document, minidom  # type: ignore
+from xml.dom import minidom  # type: ignore
 from xml.parsers import expat
 
 try:
@@ -145,7 +145,7 @@ def human_size(raw: Any) -> str:
     return tsize
 
 
-def tag_data(element: Node, tag: str) -> str:
+def tag_data(element: minidom.Node, tag: str) -> str:
     for name in tag.split("/"):
         found = False
         for new_element in element.childNodes:
@@ -160,7 +160,7 @@ def tag_data(element: Node, tag: str) -> str:
     return element.firstChild.data
 
 
-def _vtag_data(element: Node, tag: str) -> List[str]:
+def _vtag_data(element: minidom.Node, tag: str) -> List[str]:
     for name in tag.split("/"):
         new_element = element.getElementsByTagName(name)
         if not new_element:
@@ -170,7 +170,7 @@ def _vtag_data(element: Node, tag: str) -> List[str]:
     return [x.firstChild.data for x in elements if x.firstChild]
 
 
-def _vtag_data_alternate(element: Node, tag: str) -> List[str]:
+def _vtag_data_alternate(element: minidom.Node, tag: str) -> List[str]:
     elements = [element]
     for name in tag.split("/"):
         new_elements: List[str] = []
@@ -180,7 +180,7 @@ def _vtag_data_alternate(element: Node, tag: str) -> List[str]:
     return [x.firstChild.data for x in elements if x.firstChild]
 
 
-def _tag_value(element: Node, tag: str) -> Optional[int]:
+def _tag_value(element: minidom.Node, tag: str) -> Optional[int]:
     item = element.getElementsByTagName(tag)
     if item:
         value = item[0].attributes["value"].value
@@ -496,7 +496,7 @@ def basic(full_path: str, mtime: Optional[float] = None) -> Dict[str, Any]:
     return metadata
 
 
-def from_container(xmldoc: Document) -> Dict[str, Any]:
+def from_container(xmldoc: minidom.Document) -> Dict[str, Any]:
     metadata = {}
 
     keys = {
@@ -622,7 +622,7 @@ def _nfo_vitems(source: List[str], metadata: Dict[str, Any]) -> Dict[str, Any]:
     return metadata
 
 
-def _parse_nfo(nfo_path: str, nfo_data: Optional[List[str]] = None) -> Document:
+def _parse_nfo(nfo_path: str, nfo_data: Optional[List[str]] = None) -> minidom.Document:
     # nfo files can contain XML or a URL to seed the XBMC metadata scrapers
     # It's also possible to have both (a URL after the XML metadata)
     # pyTivo only parses the XML metadata, but we'll try to stip the URL
@@ -680,7 +680,7 @@ def _from_tvshow_nfo(tvshow_nfo_path: str) -> Dict[str, Any]:
     return metadata
 
 
-def _from_episode_nfo(nfo_path: str, xmldoc: Document) -> Dict[str, Any]:
+def _from_episode_nfo(nfo_path: str, xmldoc: minidom.Document) -> Dict[str, Any]:
     metadata: Dict[str, Any] = {}
 
     items = {
@@ -736,7 +736,7 @@ def _from_episode_nfo(nfo_path: str, xmldoc: Document) -> Dict[str, Any]:
     return metadata
 
 
-def _from_movie_nfo(xmldoc: Document) -> Dict[str, Any]:
+def _from_movie_nfo(xmldoc: minidom.Document) -> Dict[str, Any]:
     metadata: Dict[str, Any] = {}
 
     movie = xmldoc.getElementsByTagName("movie")
