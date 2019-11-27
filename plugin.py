@@ -4,19 +4,7 @@ import shutil
 import sys
 import threading
 import time
-from typing import (
-    List,
-    Any,
-    Tuple,
-    Dict,
-    TYPE_CHECKING,
-    Optional,
-    Callable,
-    Union,
-    Type,
-    TypeVar,
-    Generic,
-)
+from typing import List, Any, Tuple, TYPE_CHECKING, Optional, Callable, Union, Generic
 import urllib.request, urllib.parse, urllib.error
 from http.server import BaseHTTPRequestHandler
 
