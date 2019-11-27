@@ -11,6 +11,8 @@ from configparser import NoOptionError
 from functools import reduce
 from typing import Dict, Any, List, Optional, Tuple
 
+from pytivo_types import Bdict, Settings
+
 tivos: Dict[str, Dict[str, Any]]
 guid: uuid.UUID
 config_files: List[str]
@@ -18,11 +20,6 @@ tivos_found: bool
 bin_paths: Dict[str, str]
 config: configparser.ConfigParser
 configs_found: List[str]
-
-
-class Bdict(dict):
-    def getboolean(self, x: str) -> bool:
-        return self.get(x, "False").lower() in ("1", "yes", "true", "on")
 
 
 def init(argv: List[str]) -> None:
@@ -185,7 +182,7 @@ def isTsnInConfig(tsn: str) -> bool:
     return ("_tivo_" + tsn) in config.sections()
 
 
-def getShares(tsn: str = "") -> List[Tuple[str, Bdict]]:
+def getShares(tsn: str = "") -> List[Tuple[str, Settings]]:
     shares = [
         (section, Bdict(config.items(section)))
         for section in config.sections()
