@@ -70,11 +70,11 @@ durre = re.compile(r".*Duration: ([0-9]+):([0-9]+):([0-9]+)\.([0-9]+),").search
 tfname = os.path.join(SCRIPTDIR, "templates", "container.tmpl")
 tpname = os.path.join(SCRIPTDIR, "templates", "m3u.tmpl")
 iname = os.path.join(SCRIPTDIR, "templates", "item.tmpl")
-with open(tfname, "rb") as tfname_fh:
+with open(tfname, "r") as tfname_fh:
     FOLDER_TEMPLATE = tfname_fh.read()
-with open(tpname, "rb") as tpname_fh:
+with open(tpname, "r") as tpname_fh:
     PLAYLIST_TEMPLATE = tpname_fh.read()
-with open(iname, "rb") as iname_fh:
+with open(iname, "r") as iname_fh:
     ITEM_TEMPLATE = iname_fh.read()
 
 # TODO: No more subprocess.Popen._make_inheritable, need to verify on Windows
