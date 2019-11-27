@@ -19,6 +19,7 @@ import config
 import metadata
 from . import transcode
 from plugin import Plugin, quote
+from pytivo_types import Query
 
 if TYPE_CHECKING:
     from httpserver import TivoHTTPHandler
@@ -141,9 +142,7 @@ class Video(Plugin):
         else:
             return transcode.supported_format(full_path)
 
-    def send_file(
-        self, handler: "TivoHTTPHandler", path: str, query: Dict[str, Any]
-    ) -> None:
+    def send_file(self, handler: "TivoHTTPHandler", path: str, query: Query) -> None:
         mime = "video/x-tivo-mpeg"
         tsn = handler.headers.get("tsn", "")
         try:
@@ -381,7 +380,7 @@ class Video(Plugin):
 
         return data
 
-    def QueryContainer(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
+    def QueryContainer(self, handler: "TivoHTTPHandler", query: Query) -> None:
         tsn = handler.headers.get("tsn", "")
         subcname = query["Container"][0]
 
@@ -455,8 +454,8 @@ class Video(Plugin):
         t.videos = videos
         t.quote = quote
         t.escape = escape
-        #t.crc = zlib.crc32 # applied to (guid + name) and (guid + video.name)
-        t.crc = crc_str # applied to (guid + name) and (guid + video.name)
+        # t.crc = zlib.crc32 # applied to (guid + name) and (guid + video.name)
+        t.crc = crc_str  # applied to (guid + name) and (guid + video.name)
         t.guid = config.getGUID()
         t.tivos = config.tivos
         handler.send_xml(str(t))
@@ -526,7 +525,7 @@ class Video(Plugin):
             ]
         )
 
-    def TVBusQuery(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
+    def TVBusQuery(self, handler: "TivoHTTPHandler", query: Query) -> None:
         tsn = handler.headers.get("tsn", "")
         f = query["File"][0]
         path = self.get_local_path(handler, query)

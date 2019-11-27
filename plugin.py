@@ -19,8 +19,11 @@ from typing import (
 )
 import urllib.request, urllib.parse, urllib.error
 from http.server import BaseHTTPRequestHandler
+
 from Cheetah.Filters import Filter  # type: ignore
+
 from lrucache import LRUCache
+from pytivo_types import Query
 
 if TYPE_CHECKING:
     from httpserver import TivoHTTPHandler
@@ -90,10 +93,10 @@ FileDataLike = TypeVar("FileDataLike", bound=FileData)
 
 class SortList(Generic[FileDataLike]):
     def __init__(self, files: List[FileDataLike]) -> None:
-        self.files = files
-        self.unsorted = True
-        self.sortby = None
-        self.last_start = 0
+        self.files: List[FileDataLike] = files
+        self.unsorted: bool = True
+        self.sortby: Optional[str] = None
+        self.last_start: int = 0
 
 
 def GetPlugin(name: str) -> Union["Plugin", Error]:
@@ -138,17 +141,13 @@ class Plugin:
     def init(self) -> None:
         pass
 
-    def send_file(
-        self, handler: "TivoHTTPHandler", path: str, query: Dict[str, Any]
-    ) -> None:
+    def send_file(self, handler: "TivoHTTPHandler", path: str, query: Query) -> None:
         handler.send_content_file(path)
 
-    def get_local_base_path(
-        self, handler: "TivoHTTPHandler", query: Dict[str, Any]
-    ) -> str:
+    def get_local_base_path(self, handler: "TivoHTTPHandler", query: Query) -> str:
         return os.path.normpath(handler.container["path"])
 
-    def get_local_path(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> str:
+    def get_local_path(self, handler: "TivoHTTPHandler", query: Query) -> str:
 
         subcname = query["Container"][0]
 
@@ -163,7 +162,7 @@ class Plugin:
     def item_count(
         self,
         handler: "TivoHTTPHandler",
-        query: Dict[str, Any],
+        query: Query,
         cname: str,
         files: List[FileDataLike],
         last_start: int = 0,
@@ -230,7 +229,7 @@ class Plugin:
     def get_files(
         self,
         handler: "TivoHTTPHandler",
-        query: Dict[str, Any],
+        query: Query,
         filterFunction: Optional[Callable] = None,
         force_alpha: bool = False,
         allow_recurse: bool = True,

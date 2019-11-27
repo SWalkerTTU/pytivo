@@ -20,6 +20,7 @@ from lrucache import LRUCache
 import config
 from plugin import Plugin, quote, unquote, FileData, SortList
 from plugins.video.transcode import kill
+from pytivo_types import Query
 
 if TYPE_CHECKING:
     from httpserver import TivoHTTPHandler
@@ -112,7 +113,7 @@ def build_recursive_list(
     path: str,
     recurse: bool = True,
     filterFunction: Optional[Callable] = None,
-    file_type: Optional[List[str]] = None,
+    file_type: Optional[str] = None,
 ) -> List[FileDataMusic]:
     files = []
     try:
@@ -151,11 +152,9 @@ class Music(Plugin):
     recurse_cache = LRUCache(5)
     dir_cache = LRUCache(10)
 
-    def send_file(
-        self, handler: "TivoHTTPHandler", path: str, query: Dict[str, Any]
-    ) -> None:
-        seek = int(query.get("Seek", [0])[0])
-        duration = int(query.get("Duration", [0])[0])
+    def send_file(self, handler: "TivoHTTPHandler", path: str, query: Query) -> None:
+        seek = int(query.get("Seek", ["0"])[0])
+        duration = int(query.get("Duration", ["0"])[0])
         always = handler.container.getboolean("force_ffmpeg") and config.get_bin(
             "ffmpeg"
         )
@@ -331,7 +330,7 @@ class Music(Plugin):
         return item
 
     # this is a TivoConnect Command, so must be named this exactly
-    def QueryContainer(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
+    def QueryContainer(self, handler: "TivoHTTPHandler", query: Query) -> None:
         subcname = query["Container"][0]
         local_base_path = self.get_local_base_path(handler, query)
 
@@ -358,7 +357,7 @@ class Music(Plugin):
         handler.send_xml(str(t))
 
     # this is a TivoConnect Command, so must be named this exactly
-    def QueryItem(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
+    def QueryItem(self, handler: "TivoHTTPHandler", query: Query) -> None:
         uq = urllib.parse.unquote_plus
         splitpath = [x for x in uq(query["Url"][0]).split("/") if x]
         path = os.path.join(handler.container["path"], *splitpath[1:])
@@ -477,7 +476,7 @@ class Music(Plugin):
     def get_files(
         self,
         handler: "TivoHTTPHandler",
-        query: Dict[str, Any],
+        query: Query,
         filterFunction: Optional[Callable] = None,
         force_alpha: bool = False,  # unused in this plugin
         allow_recurse: bool = False,  # unused in this plugin
@@ -568,7 +567,7 @@ class Music(Plugin):
     #   We could have a dummy argument with type Type[FileDataLike] and then
     #       just pass in FileDataMusic to define the type inside the List?
     def get_playlist(
-        self, handler: "TivoHTTPHandler", query: Dict[str, Any]
+        self, handler: "TivoHTTPHandler", query: Query
     ) -> Tuple[List[Any], int, int]:
         subcname = query["Container"][0]
 

@@ -50,11 +50,13 @@ except ImportError:
         use_pil = False
         print("Python Imaging Library not found; using FFmpeg")
 
-import config
 from Cheetah.Template import Template  # type: ignore
+
+import config
 from lrucache import LRUCache
 from plugin import Plugin, quote, unquote, FileData, build_recursive_list, SortList
 from plugins.video.transcode import kill
+from pytivo_types import Query
 
 if TYPE_CHECKING:
     from httpserver import TivoHTTPHandler
@@ -401,9 +403,7 @@ class Photo(Plugin):
 
         return True, output
 
-    def send_file(
-        self, handler: "TivoHTTPHandler", path: str, query: Dict[str, Any]
-    ) -> None:
+    def send_file(self, handler: "TivoHTTPHandler", path: str, query: Query) -> None:
         if "Format" in query and query["Format"][0] != "image/jpeg":
             handler.send_error(415)
             return
@@ -473,7 +473,7 @@ class Photo(Plugin):
         self.media_data_cache[f.name] = item
         return item
 
-    def QueryContainer(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
+    def QueryContainer(self, handler: "TivoHTTPHandler", query: Query) -> None:
         # Reject a malformed request -- these attributes should only
         # appear in requests to send_file, but sometimes appear here
         badattrs = ("Rotation", "Width", "Height", "PixelShape")
@@ -499,7 +499,7 @@ class Photo(Plugin):
 
         handler.send_xml(str(t))
 
-    def QueryItem(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
+    def QueryItem(self, handler: "TivoHTTPHandler", query: Query) -> None:
         uq = urllib.parse.unquote_plus
         splitpath = [x for x in uq(query["Url"][0]).split("/") if x]
         path = os.path.join(handler.container["path"], *splitpath[1:])
@@ -515,7 +515,7 @@ class Photo(Plugin):
     def get_files(
         self,
         handler: "TivoHTTPHandler",
-        query: Dict[str, Any],
+        query: Query,
         filterFunction: Optional[Callable] = None,
         force_alpha: bool = False,
         allow_recurse: bool = True,

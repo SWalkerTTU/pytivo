@@ -15,9 +15,11 @@ from xml.sax.saxutils import escape
 from typing import Dict, Any, Optional, List, Tuple
 
 from Cheetah.Template import Template  # type: ignore
+
 import config
 from plugin import GetPlugin
 from beacon import Beacon
+from pytivo_types import Query
 
 SCRIPTDIR = os.path.dirname(__file__)
 
@@ -154,9 +156,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
             query = parse_qs(qs, keep_blank_values=True)
         self.handle_query(query, tsn)
 
-    def do_command(
-        self, query: Dict[str, List[str]], command: str, target: str, tsn: str
-    ) -> bool:
+    def do_command(self, query: Query, command: str, target: str, tsn: str) -> bool:
         for name, container in config.getShares(tsn):
             if target == name:
                 plugin = GetPlugin(container["type"])
@@ -170,7 +170,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                     break
         return False
 
-    def handle_query(self, query: Dict[str, List[str]], tsn: str) -> None:
+    def handle_query(self, query: Query, tsn: str) -> None:
         mname = False
         if "Command" in query and len(query["Command"]) >= 1:
 
@@ -248,7 +248,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         handle.close()
         self.wfile.flush()
 
-    def handle_file(self, query: Dict[str, List[str]], splitpath: List[str]) -> None:
+    def handle_file(self, query: Query, splitpath: List[str]) -> None:
         if ".." not in splitpath:  # Protect against path exploits
             ## Pass it off to a plugin?
             for name, container in list(self.server.containers.items()):
@@ -386,7 +386,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
 
         self.send_html(str(t))
 
-    def unsupported(self, query: Dict[str, List[str]]) -> None:
+    def unsupported(self, query: Query) -> None:
         message = UNSUP % "\n".join(
             [
                 "<li>%s: %s</li>" % (key, repr(value))

@@ -17,6 +17,7 @@ from Cheetah.Template import Template  # type: ignore
 import config
 import metadata
 from plugin import Plugin
+from pytivo_types import Query
 
 if TYPE_CHECKING:
     from httpserver import TivoHTTPHandler
@@ -147,7 +148,7 @@ class ToGo(Plugin):
                 logger.error(e)
                 raise
 
-    def NPL(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
+    def NPL(self, handler: "TivoHTTPHandler", query: Query) -> None:
         global BASIC_META
         global DETAILS_URLS
         shows_per_page = 50  # Change this to alter the number of shows returned
@@ -424,7 +425,7 @@ class ToGo(Plugin):
             QUEUE[tivoIP].pop(0)
         del QUEUE[tivoIP]
 
-    def ToGo(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
+    def ToGo(self, handler: "TivoHTTPHandler", query: Query) -> None:
         togo_path = config.get_server("togo_path", "")
         for name, data in config.getShares():
             if togo_path == name:
@@ -466,12 +467,12 @@ class ToGo(Plugin):
             message = MISSING
         handler.redir(message, 5)
 
-    def ToGoStop(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
+    def ToGoStop(self, handler: "TivoHTTPHandler", query: Query) -> None:
         theurl = query["Url"][0]
         STATUS[theurl]["running"] = False
         handler.redir(TRANS_STOP % unquote(theurl))
 
-    def Unqueue(self, handler: "TivoHTTPHandler", query: Dict[str, Any]) -> None:
+    def Unqueue(self, handler: "TivoHTTPHandler", query: Query) -> None:
         theurl = query["Url"][0]
         tivoIP = query["TiVo"][0]
         del STATUS[theurl]
