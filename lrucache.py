@@ -1,5 +1,8 @@
 # lrucache.py -- a simple LRU (Least-Recently-Used) cache class
 
+# Modified 2019 Matthew Clapp <itsayellow+dev@gmail.com>
+#   to work with python3
+
 # Copyright 2004 Evan Prodromou <evan@bad.dynu.ca>
 # Licensed under the Academic Free License 2.1
 
@@ -110,8 +113,23 @@ class LRUCache(object):
             self.atime = timestamp
             self.mtime = self.atime
 
-        def __cmp__(self, other):
-            return cmp(self.atime, other.atime)
+        def __lt__(self, other):
+            return self.atime < other.atime
+
+        def __le__(self, other):
+            return self.atime <= other.atime
+
+        def __eq__(self, other):
+            return self.atime == other.atime
+
+        def __ne__(self, other):
+            return self.atime != other.atime
+
+        def __gt__(self, other):
+            return self.atime > other.atime
+
+        def __ge__(self, other):
+            return self.atime >= other.atime
 
         def __repr__(self):
             return "<%s %s => %s (%s)>" % (
