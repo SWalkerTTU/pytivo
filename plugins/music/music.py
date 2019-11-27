@@ -540,11 +540,13 @@ class Music(Plugin):
             filelist.unsorted = False
 
         files = filelist.files[:]
+        print([x.name for file in files])
 
         # Trim the list
         files, total, start_item = self.item_count(
             handler, query, handler.cname, files, filelist.last_start
         )
+        print([x.name for file in files])
         filelist.last_start = start_item
         return files, total, start_item
 
