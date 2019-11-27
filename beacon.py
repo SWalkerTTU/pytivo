@@ -38,7 +38,7 @@ class ZCBroadcast:
         self.share_info: List[zeroconf.ServiceInfo] = []
         self.logger = logger
         self.rz = zeroconf.Zeroconf()
-        self.renamed: Dict[str, Any] = {}
+        self.renamed: Dict[str, str] = {}
         old_titles = self.scan()
         address = socket.inet_aton(config.get_ip())
         port = int(config.getPort())
