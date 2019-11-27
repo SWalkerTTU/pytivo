@@ -20,9 +20,11 @@ if TYPE_CHECKING:
 def no_anchor(handler: "TivoHTTPHandler", anchor: str) -> None:
     handler.server.logger.warning("Anchor not found: " + anchor)
 
+
 def read_tmpl(filename):
     with open(filename, "r") as tmpl_fh:
         return tmpl_fh.read()
+
 
 # TODO 20191125 Maybe omit file_type if no filter functions use it?
 def build_recursive_list(
@@ -43,7 +45,7 @@ def build_recursive_list(
                     build_recursive_list(f, recurse, filterFunction, file_type)
                 )
             else:
-                if filterFunction=="" or filterFunction(f, file_type):
+                if filterFunction is None or filterFunction(f, file_type):
                     files.append(FileData(f, isdir))
     except:
         print(f"build_recursive_list() Exception", file=sys.stderr)
