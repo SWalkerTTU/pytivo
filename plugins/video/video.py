@@ -31,7 +31,7 @@ CLASS_NAME = "Video"
 
 # Preload the templates
 def tmpl(name):
-    with open(os.path.join(SCRIPTDIR, "templates", name), "rb") as tmpl_fh:
+    with open(os.path.join(SCRIPTDIR, "templates", name), "r") as tmpl_fh:
         return tmpl_fh.read()
 
 
@@ -444,6 +444,9 @@ class Video(Plugin):
 
             videos.append(video)
 
+        def crc_str(in_str: str) -> int:
+            return zlib.crc32(in_str.encode("utf-8"))
+
         t = Template(XML_CONTAINER_TEMPLATE)
         t.container = handler.cname
         t.name = subcname
@@ -452,7 +455,8 @@ class Video(Plugin):
         t.videos = videos
         t.quote = quote
         t.escape = escape
-        t.crc = zlib.crc32
+        #t.crc = zlib.crc32 # applied to (guid + name) and (guid + video.name)
+        t.crc = crc_str # applied to (guid + name) and (guid + video.name)
         t.guid = config.getGUID()
         t.tivos = config.tivos
         handler.send_xml(str(t))
