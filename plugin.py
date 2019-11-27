@@ -62,6 +62,7 @@ def build_recursive_list(
                 if filterFunction is None or filterFunction(f, file_type):
                     files.append(FileData(f, isdir))
     except:
+        print(f"build_recursive_list() Exception", file=sys.stderr)
         pass
     return files
 
@@ -167,7 +168,7 @@ class Plugin:
         files: List[FileDataLike],
         last_start: int = 0,
     ) -> Tuple[List[FileDataLike], int, int]:
-        """Return only the desired portion of the list, as specified by 
+        """Return only the desired portion of the list, as specified by
            ItemCount, AnchorItem and AnchorOffset. 'files' is
            a list of objects with a 'name' attribute.
         """
@@ -258,7 +259,7 @@ class Plugin:
                 if path.startswith(p) and rc.mtime(p) < updated:
                     del rc[p]
 
-        if not filelist:
+        if not filelist.files:
             filelist = SortList[FileData](
                 build_recursive_list(path, recurse, filterFunction, file_type)
             )
@@ -266,6 +267,8 @@ class Plugin:
             if recurse:
                 rc[path] = filelist
             else:
+                # TODO 20191125: error here from lrucache line 159
+                # TypeError: '<' not supported between instances of '__Node' and '__Node'
                 dc[path] = filelist
 
         sortby = query.get("SortOrder", ["Normal"])[0]
