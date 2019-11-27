@@ -488,7 +488,7 @@ class Music(Plugin):
                 if path.startswith(p) and rc.mtime(p) < updated:
                     del rc[p]
 
-        if not filelist:
+        if not filelist.files:
             filelist = SortList[FileDataMusic](
                 build_recursive_list(path, recurse, filterFunction, file_type)
             )

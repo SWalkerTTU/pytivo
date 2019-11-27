@@ -515,7 +515,7 @@ class Photo(Plugin):
         filterFunction: Optional[Callable] = None,
         force_alpha: bool = False,
         allow_recurse: bool = True,
-    ) -> Tuple[List[Any], int, int]:
+    ) -> Tuple[List[FileData], int, int]:
         path = self.get_local_path(handler, query)
 
         # Build the list
@@ -535,7 +535,7 @@ class Photo(Plugin):
                 if path.startswith(p) and rc.mtime(p) < updated:
                     del rc[p]
 
-        if not filelist:
+        if not filelist.files:
             filelist = SortListLock(
                 build_recursive_list(path, recurse, filterFunction, "")
             )
