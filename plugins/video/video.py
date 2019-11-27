@@ -31,8 +31,10 @@ SCRIPTDIR = os.path.dirname(__file__)
 CLASS_NAME = "Video"
 
 # Preload the templates
-XML_CONTAINER_TEMPLATE = read_tmpl("container_xml.tmpl")
-TVBUS_TEMPLATE = read_tmpl("TvBus.tmpl")
+XML_CONTAINER_TEMPLATE = read_tmpl(
+    os.path.join(SCRIPTDIR, "templates", "container_xml.tmpl")
+)
+TVBUS_TEMPLATE = read_tmpl(os.path.join(SCRIPTDIR, "templates", "TvBus.tmpl"))
 
 EXTENSIONS = """.tivo .mpg .avi .wmv .mov .flv .f4v .vob .mp4 .m4v .mkv
 .ts .tp .trp .3g2 .3gp .3gp2 .3gpp .amv .asf .avs .bik .bix .box .bsf
