@@ -29,8 +29,9 @@ import metadata
 LOGGER = logging.getLogger("pyTivo.video.transcode")
 
 INFO_CACHE = lrucache.LRUCache(1000)
-# TODO 20191126: possibly make FFMPEG_PROCS a class because heterogneous types
-FFMPEG_PROCS: Dict[str, Any] = {}
+# TODO 20191126: possibly make FFMPEG_PROCS a class to check heterogneous types
+#   see @dataclass in python 3.7+
+FFMPEG_PROCS: Dict[str, Dict[str, Any]] = {}
 REAPERS: Dict[str, Any] = {}
 
 GOOD_MPEG_FPS = ["23.98", "24.00", "25.00", "29.97", "30.00", "50.00", "59.94", "60.00"]
