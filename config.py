@@ -9,7 +9,7 @@ import sys
 import uuid
 from configparser import NoOptionError
 from functools import reduce
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from pytivo_types import Bdict, Settings
 
