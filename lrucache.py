@@ -182,7 +182,7 @@ class LRUCache(object):
         while len(copy) > 0:
             node = heappop(copy)
             yield node.key
-        raise StopIteration
+        return  # StopIteration is a RuntimeError in python3.7+
 
     def __setattr__(self, name, value):
         object.__setattr__(self, name, value)
