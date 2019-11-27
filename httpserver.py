@@ -118,7 +118,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         if not self.authorize(tsn):
             return
         if tsn and (not config.tivos_found or tsn in config.tivos):
-            attr = config.tivos.get(tsn, {})
+            attr = config.tivos.get(tsn, Bdict({}))
             if "address" not in attr:
                 attr["address"] = self.address_string()
             if "name" not in attr:

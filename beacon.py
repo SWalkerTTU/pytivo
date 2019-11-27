@@ -12,6 +12,7 @@ import zeroconf
 
 import config
 from plugin import GetPlugin
+from pytivo_types import Bdict
 
 SHARE_TEMPLATE = "/TiVoConnect?Command=QueryContainer&Container=%s"
 PLATFORM_MAIN = "pyTivo"
@@ -105,7 +106,9 @@ class ZCBroadcast:
                 if tsn is not None:
                     address = socket.inet_ntoa(info.address)
                     port = info.port
-                    config.tivos[tsn] = {"name": name, "address": address, "port": port}
+                    config.tivos[tsn] = Bdict(
+                        {"name": name, "address": address, "port": port}
+                    )
                     config.tivos[tsn].update(info.properties)
                     self.logger.info(name)
 

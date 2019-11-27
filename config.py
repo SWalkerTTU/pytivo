@@ -13,7 +13,7 @@ from typing import Dict, Any, List, Optional, Tuple
 
 from pytivo_types import Bdict, Settings
 
-tivos: Dict[str, Dict[str, Any]]
+tivos: Dict[str, Settings]
 guid: uuid.UUID
 config_files: List[str]
 tivos_found: bool
