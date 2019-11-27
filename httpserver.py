@@ -12,7 +12,7 @@ from io import StringIO, BytesIO
 from email.utils import formatdate
 from urllib.parse import unquote_plus, quote, parse_qs
 from xml.sax.saxutils import escape
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple
 
 from Cheetah.Template import Template  # type: ignore
 
