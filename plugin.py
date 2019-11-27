@@ -208,11 +208,6 @@ class Plugin:
 
     # Returns List[Any] but really we want here List[FileData] and in
     #   children parent List[FileData*]
-    # TODO 20191125: We could make a generic function if we only accepted an
-    #   argument to define what FileDataLike is in this case.
-    #   We could return Tuple[List[FileDataLike], int, int] and
-    #   We could have a dummy argument with type Type[FileDataLike] and then
-    #       just pass in FileData to define the type inside the List?
     def get_files(
         self,
         handler: "TivoHTTPHandler",
@@ -221,7 +216,6 @@ class Plugin:
         force_alpha: bool = False,
         allow_recurse: bool = True,
     ) -> Tuple[List[Any], int, int]:
-
         subcname = query["Container"][0]
         path = self.get_local_path(handler, query)
 

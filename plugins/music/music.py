@@ -466,13 +466,6 @@ class Music(Plugin):
 
         return playlist
 
-    # Returns List[Any] but really we want here List[FileDataMusic] and in
-    #   parent List[FileData]
-    # TODO 20191125: We could make a generic function if we only accepted an
-    #   argument to define what FileDataLike is in this case.
-    #   We could return Tuple[List[FileDataLike], int, int] and
-    #   We could have a dummy argument with type Type[FileDataLike] and then
-    #       just pass in FileDataMusic to define the type inside the List?
     def get_files(
         self,
         handler: "TivoHTTPHandler",
@@ -480,7 +473,7 @@ class Music(Plugin):
         filterFunction: Optional[Callable] = None,
         force_alpha: bool = False,  # unused in this plugin
         allow_recurse: bool = False,  # unused in this plugin
-    ) -> Tuple[List[Any], int, int]:
+    ) -> Tuple[List[FileDataMusic], int, int]:
         path = self.get_local_path(handler, query)
 
         file_type = query.get("Filter", [""])[0]
