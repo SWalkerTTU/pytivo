@@ -546,7 +546,6 @@ class Photo(Plugin):
                 rc[path] = filelist
             else:
                 dc[path] = filelist
-        print([file.name for file in filelist.files])
 
         filelist.acquire()
 
@@ -599,7 +598,6 @@ class Photo(Plugin):
             filelist.unsorted = False
 
         files = filelist.files[:]
-        print([file.name for file in files])
 
         # Filter it -- this section needs work
         if "Filter" in query:
