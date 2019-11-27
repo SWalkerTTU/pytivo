@@ -279,7 +279,8 @@ class Plugin:
                 # primary by descending isdir
                 filelist.files.sort(key=lambda x: x.isdir, reverse=True)
             elif sortby == "!CaptureDate":
-                filelist.files.sort(key=lambda x: x.mdate)
+                # most recent date at top
+                filelist.files.sort(key=lambda x: x.mdate, reverse=True)
             else:
                 filelist.files.sort(key=lambda x: x.name)
 
