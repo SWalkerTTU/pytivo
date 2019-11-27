@@ -18,9 +18,9 @@ from Cheetah.Template import Template  # type: ignore
 
 from lrucache import LRUCache
 import config
-from plugin import Plugin, quote, unquote, FileData, SortList
+from plugin import Plugin, quote, unquote, SortList
 from plugins.video.transcode import kill
-from pytivo_types import Query
+from pytivo_types import Query, FileData
 
 if TYPE_CHECKING:
     from httpserver import TivoHTTPHandler
@@ -96,6 +96,14 @@ with open(iname, "rb") as iname_fh:
 #    patchSubprocess()
 
 
+class FileDataMusic(FileData):
+    def __init__(self, name: str, isdir: bool) -> None:
+        super().__init__(name, isdir)
+        self.isplay = os.path.splitext(name)[1].lower() in PLAYLISTS
+        self.title = ""
+        self.duration = 0
+
+
 def get_tag(tagname, d):
     for tag in [tagname] + TAGNAMES[tagname]:
         try:
@@ -132,14 +140,6 @@ def build_recursive_list(
     except:
         pass
     return files
-
-
-class FileDataMusic(FileData):
-    def __init__(self, name: str, isdir: bool) -> None:
-        super().__init__(name, isdir)
-        self.isplay = os.path.splitext(name)[1].lower() in PLAYLISTS
-        self.title = ""
-        self.duration = 0
 
 
 class Music(Plugin):

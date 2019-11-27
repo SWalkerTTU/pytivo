@@ -54,9 +54,9 @@ from Cheetah.Template import Template  # type: ignore
 
 import config
 from lrucache import LRUCache
-from plugin import Plugin, quote, unquote, FileData, build_recursive_list, SortList
+from plugin import Plugin, quote, unquote, build_recursive_list, SortList
 from plugins.video.transcode import kill
-from pytivo_types import Query
+from pytivo_types import Query, FileData
 
 if TYPE_CHECKING:
     from httpserver import TivoHTTPHandler
