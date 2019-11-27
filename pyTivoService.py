@@ -1,3 +1,6 @@
+# type: ignore
+# Ignore typing for mypy on this whole file, problematic outside of Windows
+
 import os
 import select
 import sys
