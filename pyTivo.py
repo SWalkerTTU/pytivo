@@ -8,9 +8,9 @@ import time
 from typing import Callable, Type
 from types import TracebackType
 
-# if sys.version_info[0] != 2 or sys.version_info[1] < 5:
-#    print ('ERROR: pyTivo requires Python >= 2.5, < 3.0.\n')
-#    sys.exit(1)
+if sys.version_info[0] != 3 or sys.version_info[1] < 6:
+    print ('ERROR: pyTivo requires Python >= 3.6.\n')
+    sys.exit(1)
 
 try:
     import ssl
