@@ -19,7 +19,7 @@ from Cheetah.Template import Template  # type: ignore
 import config
 from plugin import GetPlugin
 from beacon import Beacon
-from pytivo_types import Query
+from pytivo_types import Query, Settings, Bdict
 
 SCRIPTDIR = os.path.dirname(__file__)
 
@@ -57,7 +57,7 @@ class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     def __init__(
         self, server_address: Tuple[str, int], RequestHandlerClass: type
     ) -> None:
-        self.containers: Dict[str, Any] = {}
+        self.containers: Dict[str, Settings] = {}
         self.beacon = Beacon()  # TODO 20191123 think about: set empty beacon to start
         self.stop = False
         self.restart = False
@@ -65,7 +65,7 @@ class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         http.server.HTTPServer.__init__(self, server_address, RequestHandlerClass)
         self.daemon_threads = True
 
-    def add_container(self, name: str, settings: Dict[str, Any]) -> None:
+    def add_container(self, name: str, settings: Settings) -> None:
         if name in self.containers or name == "TiVoConnect":
             raise Exception("Container Name in use")
         try:
@@ -92,6 +92,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
     def __init__(
         self, request: bytes, client_address: Tuple[str, int], server: TivoHTTPServer
     ) -> None:
+        self.container: Settings = Bdict({})
         self.wbufsize = 0x10000
         self.server_version = "pyTivo/1.0"
         self.protocol_version = "HTTP/1.1"
