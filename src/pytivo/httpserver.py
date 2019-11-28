@@ -60,6 +60,13 @@ BASE_HTML = """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 RELOAD = '<p>The <a href="%s">page</a> will reload in %d seconds.</p>'
 UNSUP = "<h3>Unsupported Command</h3> <p>Query:</p> <ul>%s</ul>"
 
+ROOT_CONTAINER_TCLASS = Template.compile(
+    file=os.path.join(SCRIPTDIR, "templates", "root_container.tmpl")
+)
+INFO_PAGE_TCLASS = Template.compile(
+    file=os.path.join(SCRIPTDIR, "templates", "info_page.tmpl")
+)
+
 
 class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     def __init__(
@@ -352,7 +359,8 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                     tsncontainers.append((section, settings))
             except Exception as msg:
                 self.server.logger.error(section + " - " + str(msg), exc_info=True)
-        t = Template(file=os.path.join(SCRIPTDIR, "templates", "root_container.tmpl"))
+
+        t = ROOT_CONTAINER_TCLASS()
 
         if self.server.beacon is None:
             raise Exception("No self.server.beacon")
@@ -368,7 +376,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.send_xml(str(t))
 
     def infopage(self) -> None:
-        t = Template(file=os.path.join(SCRIPTDIR, "templates", "info_page.tmpl"))
+        t = INFO_PAGE_TCLASS()
         t.admin = ""
 
         if get_server("tivo_mak", "") and get_server("togo_path", ""):
