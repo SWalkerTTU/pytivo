@@ -14,16 +14,24 @@ from xml.dom import minidom  # type: ignore
 
 from Cheetah.Template import Template  # type: ignore
 
-import config
-import metadata
-from plugin import Plugin, read_tmpl
-from pytivo_types import Query
+from pytivo.config import (
+    TIVOS,
+    getShares,
+    get_bin,
+    get_server,
+    get_tsn,
+    is_ts_capable,
+    tivos_by_ip,
+)
+from pytivo.metadata import dump, from_container, from_details, human_size, tag_data
+from pytivo.plugin import Plugin, read_tmpl
+from pytivo.pytivo_types import Query
 
 if TYPE_CHECKING:
-    from httpserver import TivoHTTPHandler
+    from pytivo.httpserver import TivoHTTPHandler
 
 logger = logging.getLogger("pyTivo.togo")
-tag_data = metadata.tag_data
+tag_data = tag_data
 
 SCRIPTDIR = os.path.dirname(__file__)
 
@@ -121,7 +129,7 @@ TIVO_OPENER = urllib.request.build_opener(
 )
 
 
-tsn = config.get_server("togo_tsn", "")
+tsn = get_server("togo_tsn", "")
 if tsn:
     TIVO_OPENER.addheaders.append(("TSN", tsn))
 
@@ -152,14 +160,14 @@ class ToGo(Plugin):
         shows_per_page = 50  # Change this to alter the number of shows returned
         folder = ""
         FirstAnchor = ""
-        has_tivodecode = bool(config.get_bin("tivodecode"))
+        has_tivodecode = bool(get_bin("tivodecode"))
 
         if "TiVo" in query:
             tivoIP = query["TiVo"][0]
-            tsn = config.tivos_by_ip(tivoIP)
-            attrs = config.tivos[tsn]
+            tsn = tivos_by_ip(tivoIP)
+            attrs = TIVOS[tsn]
             tivo_name = attrs.get("name", tivoIP)
-            tivo_mak = config.get_tsn("tivo_mak", tsn)
+            tivo_mak = get_tsn("tivo_mak", tsn)
             if tivo_mak is None:
                 handler.redir("Unable to find Tivo.", 10)
                 return
@@ -237,7 +245,7 @@ class ToGo(Plugin):
 
                     if "SourceSize" in entry:
                         rawsize = entry["SourceSize"]
-                        entry["SourceSize"] = metadata.human_size(rawsize)
+                        entry["SourceSize"] = human_size(rawsize)
 
                     if "Duration" in entry:
                         dur = getint(entry["Duration"]) / 1000
@@ -257,7 +265,7 @@ class ToGo(Plugin):
                     if url in BASIC_META:
                         entry.update(BASIC_META[url])
                     else:
-                        basic_data = metadata.from_container(item)
+                        basic_data = from_container(item)
                         entry.update(basic_data)
                         BASIC_META[url] = basic_data
                         if "Details" in entry:
@@ -279,7 +287,7 @@ class ToGo(Plugin):
         if tivoIP in QUEUE:
             t.queue = QUEUE[tivoIP]
         t.has_tivodecode = has_tivodecode
-        t.togo_mpegts = config.is_ts_capable(tsn)
+        t.togo_mpegts = is_ts_capable(tsn)
         t.tname = tivo_name
         t.tivoIP = tivoIP
         t.container = handler.cname
@@ -326,12 +334,12 @@ class ToGo(Plugin):
             meta = BASIC_META[url]
             try:
                 handle = self.tivo_open(DETAILS_URLS[url])
-                meta.update(metadata.from_details(handle.read().decode("utf-8")))
+                meta.update(from_details(handle.read().decode("utf-8")))
                 handle.close()
             except:
                 pass
             metafile = open(outfile + ".txt", "w")
-            metadata.dump(metafile, meta)
+            dump(metafile, meta)
             metafile.close()
 
         AUTH_HANDLER.add_password("TiVo DVR", url, "tivo", mak)
@@ -345,7 +353,7 @@ class ToGo(Plugin):
             STATUS[url]["error"] = str(msg)
             return
 
-        tivo_name = config.tivos[config.tivos_by_ip(tivoIP)].get("name", tivoIP)
+        tivo_name = TIVOS[tivos_by_ip(tivoIP)].get("name", tivoIP)
 
         logger.info(
             '[%s] Start getting "%s" from %s'
@@ -353,7 +361,7 @@ class ToGo(Plugin):
         )
 
         if STATUS[url]["decode"]:
-            tivodecode_path = config.get_bin("tivodecode")
+            tivodecode_path = get_bin("tivodecode")
             if tivodecode_path is None:
                 STATUS[url]["running"] = False
                 STATUS[url]["error"] = "Can't find binary 'tivodecode'."
@@ -424,14 +432,14 @@ class ToGo(Plugin):
         del QUEUE[tivoIP]
 
     def ToGo(self, handler: "TivoHTTPHandler", query: Query) -> None:
-        togo_path = config.get_server("togo_path", "")
-        for name, data in config.getShares():
+        togo_path = get_server("togo_path", "")
+        for name, data in getShares():
             if togo_path == name:
                 togo_path = str(data.get("path"))
         if togo_path:
             tivoIP = query["TiVo"][0]
-            tsn = config.tivos_by_ip(tivoIP)
-            tivo_mak = config.get_tsn("tivo_mak", tsn)
+            tsn = tivos_by_ip(tivoIP)
+            tivo_mak = get_tsn("tivo_mak", tsn)
             urls = query.get("Url", [])
             decode = "decode" in query
             save = "save" in query

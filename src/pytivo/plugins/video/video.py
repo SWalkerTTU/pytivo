@@ -13,16 +13,36 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 from xml.sax.saxutils import escape
 
 from Cheetah.Template import Template  # type: ignore
-from lrucache import LRUCache
 
-import config
-import metadata
+from pytivo.lrucache import LRUCache
+from pytivo.config import (
+    TIVOS,
+    getDebug,
+    getGUID,
+    getMaxAudioBR,
+    getTivoHeight,
+    getTivoWidth,
+    get_bin,
+    get_server,
+    get_ts_flag,
+    is_ts_capable,
+)
+from pytivo.metadata import (
+    basic,
+    from_mscore,
+    from_tivo,
+    get_color,
+    get_mpaa,
+    get_stars,
+    get_tv,
+    human_size,
+)
 from . import transcode
-from plugin import Plugin, quote, read_tmpl
-from pytivo_types import Query
+from pytivo.plugin import Plugin, quote, read_tmpl
+from pytivo.pytivo_types import Query
 
 if TYPE_CHECKING:
-    from httpserver import TivoHTTPHandler
+    from pytivo.httpserver import TivoHTTPHandler
 
 LOGGER = logging.getLogger("pyTivo.video.video")
 
@@ -49,7 +69,7 @@ LIKELYTS = """.ts .tp .trp .3g2 .3gp .3gp2 .3gpp .m2t .m2ts .mts .mp4
 
 use_extensions = True
 try:
-    assert config.get_bin("ffmpeg")
+    assert get_bin("ffmpeg")
 except:
     use_extensions = False
 
@@ -144,7 +164,7 @@ class Video(Plugin):
         tsn = handler.headers.get("tsn", "")
         try:
             assert tsn
-            tivo_name = config.tivos[tsn].get("name", tsn)
+            tivo_name = TIVOS[tsn].get("name", tsn)
         except:
             tivo_name = handler.address_string()
 
@@ -164,9 +184,7 @@ class Video(Plugin):
             offset = 0
 
         if needs_tivodecode:
-            valid = bool(
-                config.get_bin("tivodecode") and config.get_server("tivo_mak", "")
-            )
+            valid = bool(get_bin("tivodecode") and get_server("tivo_mak", ""))
         else:
             valid = True
 
@@ -270,7 +288,7 @@ class Video(Plugin):
             return os.path.getsize(full_path)
         else:
             # Must be re-encoded
-            audioBPS = config.getMaxAudioBR(tsn) * 1000
+            audioBPS = getMaxAudioBR(tsn) * 1000
             # audioBPS = config.strtod(config.getAudioBR(tsn))
             videoBPS = transcode.select_videostr(full_path, tsn)
             bitrate = audioBPS + videoBPS
@@ -294,16 +312,16 @@ class Video(Plugin):
             LOGGER.error("vInfo.vHeight or vInfo.vWidth is None")
             return data
 
-        if (vInfo.vHeight >= 720 and config.getTivoHeight(tsn) >= 720) or (
-            vInfo.vWidth >= 1280 and config.getTivoWidth(tsn) >= 1280
+        if (vInfo.vHeight >= 720 and getTivoHeight(tsn) >= 720) or (
+            vInfo.vWidth >= 1280 and getTivoWidth(tsn) >= 1280
         ):
             data["showingBits"] = "4096"
 
-        data.update(metadata.basic(full_path, mtime))
+        data.update(basic(full_path, mtime))
         if full_path[-5:].lower() == ".tivo":
-            data.update(metadata.from_tivo(full_path))
+            data.update(from_tivo(full_path))
         if full_path[-4:].lower() == ".wtv":
-            data.update(metadata.from_mscore(vInfo.rawmeta))
+            data.update(from_mscore(vInfo.rawmeta))
 
         if "episodeNumber" in data:
             try:
@@ -312,7 +330,7 @@ class Video(Plugin):
                 ep = 0
             data["episodeNumber"] = str(ep)
 
-        if config.getDebug() and "vHost" not in data:
+        if getDebug() and "vHost" not in data:
             compatible, reason = transcode.tivo_compatible(full_path, tsn, mime)
             if compatible:
                 transcode_options: List[str] = []
@@ -431,14 +449,14 @@ class Video(Plugin):
                             video["captureDate"] = hex(isogm(video["time"]))
                 else:
                     video["valid"] = True
-                    video.update(metadata.basic(f.name, mtime))
+                    video.update(basic(f.name, mtime))
 
                 if self.use_ts(tsn, f.name):
                     video["mime"] = "video/x-tivo-mpeg-ts"
                 else:
                     video["mime"] = "video/x-tivo-mpeg"
 
-                video["textSize"] = metadata.human_size(f.size)
+                video["textSize"] = human_size(f.size)
 
             videos.append(video)
 
@@ -455,12 +473,12 @@ class Video(Plugin):
         t.escape = escape
         # t.crc = zlib.crc32 # applied to (guid + name) and (guid + video.name)
         t.crc = crc_str  # applied to (guid + name) and (guid + video.name)
-        t.guid = config.getGUID()
-        t.tivos = config.tivos
+        t.guid = getGUID()
+        t.tivos = TIVOS
         handler.send_xml(str(t))
 
     def use_ts(self, tsn: str, file_path: str) -> bool:
-        if config.is_ts_capable(tsn):
+        if is_ts_capable(tsn):
             ext = os.path.splitext(file_path)[1].lower()
             if ext == ".tivo":
                 try:
@@ -471,7 +489,7 @@ class Video(Plugin):
                 if flag[7] & 0x20:
                     return True
             else:
-                opt = config.get_ts_flag()
+                opt = get_ts_flag()
                 if (opt == "auto" and ext in LIKELYTS) or (
                     opt in ["true", "yes", "on"]
                 ):
@@ -492,10 +510,10 @@ class Video(Plugin):
             t = Template(TVBUS_TEMPLATE)
             t.video = file_info
             t.escape = escape
-            t.get_tv = metadata.get_tv
-            t.get_mpaa = metadata.get_mpaa
-            t.get_stars = metadata.get_stars
-            t.get_color = metadata.get_color
+            t.get_tv = get_tv
+            t.get_mpaa = get_mpaa
+            t.get_stars = get_stars
+            t.get_color = get_color
             details = str(t)
             self.tvbus_cache[(tsn, file_path)] = details
         return details

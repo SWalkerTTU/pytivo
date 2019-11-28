@@ -21,7 +21,8 @@ setup(
     keywords="tivo",
     url="https://github.com/itsayellow/pytivo",
     include_package_data=True,  # to get templates and images
-    packages=["src/pytivo"],
+    packages=["pytivo"],
+    package_dir={"": "src"},
     install_requires=["mutagen", "Cheetah3", "zeroconf", "Pillow"],
     entry_points={"console_scripts": ["pytivo=pytivo.pyTivo:cli"]},
     python_requires=">=3.6",

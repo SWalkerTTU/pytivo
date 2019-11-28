@@ -10,21 +10,41 @@ import tempfile
 import threading
 import time
 from typing import (
-    Dict,
     Any,
     BinaryIO,
-    Union,
+    Dict,
     List,
-    Tuple,
-    Optional,
-    TypeVar,
     NamedTuple,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
 )
 
-import lrucache
-
-import config
-import metadata
+from pytivo.config import (
+    get169Blacklist,
+    get169Letterbox,
+    get169Setting,
+    getAudioBR,
+    getBuffSize,
+    getFFmpegPrams,
+    getFFmpegWait,
+    getMaxAudioBR,
+    getMaxVideoBR,
+    getOptres,
+    getTivoHeight,
+    getTivoWidth,
+    getVideoBR,
+    get_bin,
+    get_server,
+    get_tsn,
+    isHDtivo,
+    nearestTivoHeight,
+    nearestTivoWidth,
+    strtod,
+)
+from pytivo.lrucache import LRUCache
+from pytivo.metadata import from_text
 
 LOGGER = logging.getLogger("pyTivo.video.transcode")
 
@@ -45,7 +65,7 @@ class FfmpegProcess:
         self.blocks = blocks
 
 
-INFO_CACHE = lrucache.LRUCache(1000)
+INFO_CACHE = LRUCache(1000)
 # TODO 20191126: possibly make FFMPEG_PROCS a class to check heterogneous types
 #   see @dataclass in python 3.7+
 FFMPEG_PROCS: Dict[str, FfmpegProcess] = {}
@@ -135,17 +155,17 @@ def transcode(
 ) -> int:
     settings = transcode_settings(isQuery=False, inFile=inFile, tsn=tsn, mime=mime)
 
-    ffmpeg_path = config.get_bin("ffmpeg")
+    ffmpeg_path = get_bin("ffmpeg")
     if ffmpeg_path is None:
         LOGGER.error("No ffmpeg binary found")
         return 0
 
     if inFile[-5:].lower() == ".tivo":
-        tivodecode_path = config.get_bin("tivodecode")
+        tivodecode_path = get_bin("tivodecode")
         if tivodecode_path is None:
             LOGGER.error("No tivodecode binary found.")
             return 0
-        tivo_mak = config.get_server("tivo_mak", "")
+        tivo_mak = get_server("tivo_mak", "")
         if tivo_mak == "":
             LOGGER.error("No valid tivo_mak found.")
             return 0
@@ -305,7 +325,7 @@ def select_audiocodec(
                     aCh = vInfoQuery.aCh
             else:
                 codec = "TBA"
-        if aKbps and aKbps <= config.getMaxAudioBR(tsn):
+        if aKbps and aKbps <= getMaxAudioBR(tsn):
             # compatible codec and bitrate, do not reencode audio
             codec = "copy"
         if vInfo.aCodec != "ac3" and (aCh is None or aCh > 2):
@@ -336,7 +356,7 @@ def select_audioch(inFile: str, tsn: str) -> List[str]:
 
 def select_audiolang(inFile: str, tsn: str) -> str:
     vInfo = video_info(inFile)
-    audio_lang = config.get_tsn("audio_lang", tsn)
+    audio_lang = get_tsn("audio_lang", tsn)
     LOGGER.debug("audio_lang: %s" % audio_lang)
     if vInfo.mapAudio:
         # default to first detected audio stream to begin with
@@ -383,7 +403,7 @@ def select_audiolang(inFile: str, tsn: str) -> str:
 def select_videofps(inFile: str, tsn: str) -> List[str]:
     vInfo = video_info(inFile)
     fps = ["-r", "29.97"]  # default
-    if config.isHDtivo(tsn) and vInfo.vFps in GOOD_MPEG_FPS:
+    if isHDtivo(tsn) and vInfo.vFps in GOOD_MPEG_FPS:
         fps = []
     return fps
 
@@ -417,27 +437,27 @@ def select_videostr(inFile: str, tsn: str, mime: str = "") -> int:
             video_str -= vInfo.aKbps
         video_str *= 1000
     else:
-        video_str = config.strtod(config.getVideoBR(tsn))
-        if config.isHDtivo(tsn) and vInfo.kbps:
+        video_str = strtod(getVideoBR(tsn))
+        if isHDtivo(tsn) and vInfo.kbps:
             video_str = max(video_str, vInfo.kbps * 1000)
-        video_str = int(min(config.strtod(config.getMaxVideoBR(tsn)) * 0.95, video_str))
+        video_str = int(min(strtod(getMaxVideoBR(tsn)) * 0.95, video_str))
     return video_str
 
 
 def select_audiobr(tsn: str) -> List[str]:
-    return ["-b:a", config.getAudioBR(tsn)]
+    return ["-b:a", getAudioBR(tsn)]
 
 
 def select_maxvideobr(tsn: str) -> List[str]:
-    return ["-maxrate", config.getMaxVideoBR(tsn)]
+    return ["-maxrate", getMaxVideoBR(tsn)]
 
 
 def select_buffsize(tsn: str) -> List[str]:
-    return ["-bufsize", config.getBuffSize(tsn)]
+    return ["-bufsize", getBuffSize(tsn)]
 
 
 def select_ffmpegprams(tsn: str) -> str:
-    params = config.getFFmpegPrams(tsn)
+    params = getFFmpegPrams(tsn)
     if not params:
         params = ""
     return params
@@ -492,18 +512,18 @@ def pad_LR(
 
 
 def select_aspect(inFile: str, tsn: str = "") -> List[str]:
-    tivo_width = config.getTivoWidth(tsn)
-    tivo_height = config.getTivoHeight(tsn)
+    tivo_width = getTivoWidth(tsn)
+    tivo_height = getTivoHeight(tsn)
 
     vInfo = video_info(inFile)
 
     LOGGER.debug("tsn: %s" % tsn)
 
-    aspect169 = config.get169Setting(tsn)
+    aspect169 = get169Setting(tsn)
 
     LOGGER.debug("aspect169: %s" % aspect169)
 
-    optres = config.getOptres(tsn)
+    optres = getOptres(tsn)
 
     LOGGER.debug("optres: %s" % optres)
 
@@ -512,8 +532,8 @@ def select_aspect(inFile: str, tsn: str = "") -> List[str]:
         return []
 
     if optres:
-        optHeight = config.nearestTivoHeight(vInfo.vHeight)
-        optWidth = config.nearestTivoWidth(vInfo.vWidth)
+        optHeight = nearestTivoHeight(vInfo.vHeight)
+        optWidth = nearestTivoWidth(vInfo.vWidth)
         if optHeight < tivo_height:
             tivo_height = optHeight
         if optWidth < tivo_width:
@@ -544,7 +564,7 @@ def select_aspect(inFile: str, tsn: str = "") -> List[str]:
         )
     )
 
-    if config.isHDtivo(tsn) and not optres:
+    if isHDtivo(tsn) and not optres:
         if vInfo.par:
             npar = par2
 
@@ -588,10 +608,10 @@ def select_aspect(inFile: str, tsn: str = "") -> List[str]:
     elif (
         (rwidth, rheight) in [(16, 9), (20, 11), (40, 33), (118, 81), (59, 27)]
         or vInfo.dar1 == "16:9"
-    ) and (aspect169 or config.get169Letterbox(tsn)):
+    ) and (aspect169 or get169Letterbox(tsn)):
         LOGGER.debug("File is within 16:9 list and 16:9 allowed.")
 
-        if config.get169Blacklist(tsn) or (aspect169 and config.get169Letterbox(tsn)):
+        if get169Blacklist(tsn) or (aspect169 and get169Letterbox(tsn)):
             aspect = "4:3"
         else:
             aspect = "16:9"
@@ -615,7 +635,7 @@ def select_aspect(inFile: str, tsn: str = "") -> List[str]:
             if aspect169 and ratio > 135:  # If file would fall in 4:3
                 # assume it is supposed to be 4:3
 
-                if config.get169Blacklist(tsn) or config.get169Letterbox(tsn):
+                if get169Blacklist(tsn) or get169Letterbox(tsn):
                     settings.append("4:3")
                 else:
                     settings.append("16:9")
@@ -641,7 +661,7 @@ def select_aspect(inFile: str, tsn: str = "") -> List[str]:
                     )
 
             else:  # this is a 4:3 file or 16:9 output not allowed
-                if ratio > 135 and config.get169Letterbox(tsn):
+                if ratio > 135 and get169Letterbox(tsn):
                     settings.append("16:9")
                     multiplier = multiplier16by9
                 else:
@@ -682,23 +702,20 @@ def tivo_compatible_video(
         return (False, "vCodec %s not compatible" % codec)
 
     if vInfo.kbps is not None and vInfo.aKbps is not None:
-        if (
-            vInfo.kbps - max(0, vInfo.aKbps)
-            > config.strtod(config.getMaxVideoBR(tsn)) / 1000
-        ):
+        if vInfo.kbps - max(0, vInfo.aKbps) > strtod(getMaxVideoBR(tsn)) / 1000:
             return (False, "%s kbps exceeds max video bitrate" % vInfo.kbps)
     else:
         return (False, "%s kbps not supported" % vInfo.kbps)
 
-    if config.isHDtivo(tsn):
+    if isHDtivo(tsn):
         # HD Tivo detected, skipping remaining tests.
         return message
 
     if not vInfo.vFps in ["29.97", "59.94"]:
         return (False, "%s vFps, should be 29.97" % vInfo.vFps)
 
-    if (config.get169Blacklist(tsn) and not config.get169Setting(tsn)) or (
-        config.get169Letterbox(tsn) and config.get169Setting(tsn)
+    if (get169Blacklist(tsn) and not get169Setting(tsn)) or (
+        get169Letterbox(tsn) and get169Setting(tsn)
     ):
         if vInfo.dar1 and vInfo.dar1 not in ("4:3", "8:9", "880:657"):
             return (
@@ -745,11 +762,11 @@ def tivo_compatible_audio(
             message = (False, "aCodec %s not compatible" % codec)
             break
 
-        if not vInfo.aKbps or int(vInfo.aKbps) > config.getMaxAudioBR(tsn):
+        if not vInfo.aKbps or int(vInfo.aKbps) > getMaxAudioBR(tsn):
             message = (False, "%s kbps exceeds max audio bitrate" % vInfo.aKbps)
             break
 
-        audio_lang = config.get_tsn("audio_lang", tsn)
+        audio_lang = get_tsn("audio_lang", tsn)
         if audio_lang:
             if (
                 vInfo.mapAudio is None
@@ -779,7 +796,7 @@ def tivo_compatible(inFile: str, tsn: str = "", mime: str = "") -> Tuple[bool, s
     vInfo = video_info(inFile)
 
     message = (True, "all compatible")
-    if not config.get_bin("ffmpeg"):
+    if not get_bin("ffmpeg"):
         if mime not in ["video/x-tivo-mpeg", "video/mpeg", ""]:
             message = (False, "no ffmpeg")
         return message
@@ -817,7 +834,7 @@ def video_info(inFile: str, cache: bool = True) -> VideoInfo:
 
     vInfo["Supported"] = True
 
-    ffmpeg_path = config.get_bin("ffmpeg")
+    ffmpeg_path = get_bin("ffmpeg")
     if ffmpeg_path is None:
         if os.path.splitext(inFile)[1].lower() not in [
             ".mpg",
@@ -841,7 +858,7 @@ def video_info(inFile: str, cache: bool = True) -> VideoInfo:
     )
 
     # wait configured # of seconds: if ffmpeg is not back give up
-    limit = config.getFFmpegWait()
+    limit = getFFmpegWait()
     if limit:
         for i in range(limit * 20):
             time.sleep(0.05)
@@ -1033,7 +1050,7 @@ def video_info(inFile: str, cache: bool = True) -> VideoInfo:
 
     vInfo["rawmeta"] = rawmeta
 
-    data = metadata.from_text(inFile)
+    data = from_text(inFile)
     for key in data:
         if key.startswith("Override_"):
             vInfo["Supported"] = True
@@ -1064,7 +1081,7 @@ def audio_check(inFile: str, tsn: str) -> Optional[VideoInfo]:
         + select_audiolang(inFile, tsn)
         + " -t 00:00:01 -f vob -"
     )
-    ffmpeg_bin = config.get_bin("ffmpeg")
+    ffmpeg_bin = get_bin("ffmpeg")
     if ffmpeg_bin is None:
         LOGGER.error("Can't locate ffmpeg binary.")
         return None

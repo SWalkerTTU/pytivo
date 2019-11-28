@@ -16,10 +16,18 @@ from typing import Dict, Optional, List, Tuple
 
 from Cheetah.Template import Template  # type: ignore
 
-import config
-from plugin import GetPlugin
-from beacon import Beacon
-from pytivo_types import Query, Settings, Bdict
+from pytivo.config import (
+    getShares,
+    get_server,
+    is_ts_capable,
+    isTsnInConfig,
+    getAllowedClients,
+    TIVOS,
+    TIVOS_FOUND,
+)
+from pytivo.plugin import GetPlugin
+from pytivo.beacon import Beacon
+from pytivo.pytivo_types import Query, Settings, Bdict
 
 SCRIPTDIR = os.path.dirname(__file__)
 
@@ -75,7 +83,7 @@ class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
     def reset(self) -> None:
         self.containers.clear()
-        for section, settings in config.getShares():
+        for section, settings in getShares():
             self.add_container(section, settings)
 
     def handle_error(self, request: bytes, client_address: Tuple[str, int]) -> None:
@@ -117,13 +125,13 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         tsn = self.headers.get("TiVo_TCD_ID", self.headers.get("tsn", ""))
         if not self.authorize(tsn):
             return
-        if tsn and (not config.tivos_found or tsn in config.tivos):
-            attr = config.tivos.get(tsn, Bdict({}))
+        if tsn and (not TIVOS_FOUND or tsn in TIVOS):
+            attr = TIVOS.get(tsn, Bdict({}))
             if "address" not in attr:
                 attr["address"] = self.address_string()
             if "name" not in attr:
                 attr["name"] = self.server.beacon.get_name(attr["address"])
-            config.tivos[tsn] = attr
+            TIVOS[tsn] = attr
 
         if "?" in self.path:
             path, opts = self.path.split("?", 1)
@@ -158,7 +166,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.handle_query(query, tsn)
 
     def do_command(self, query: Query, command: str, target: str, tsn: str) -> bool:
-        for name, container in config.getShares(tsn):
+        for name, container in getShares(tsn):
             if target == name:
                 plugin = GetPlugin(container["type"])
                 if hasattr(plugin, command):
@@ -202,7 +210,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                 and "SourceFormat" in query
                 and query["SourceFormat"][0].startswith("video")
             ):
-                if config.is_ts_capable(tsn):
+                if is_ts_capable(tsn):
                     self.send_xml(VIDEO_FORMATS_TS)
                 else:
                     self.send_xml(VIDEO_FORMATS)
@@ -279,8 +287,8 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
 
     def authorize(self, tsn: Optional[str] = None) -> bool:
         # if allowed_clients is empty, we are completely open
-        allowed_clients = config.getAllowedClients()
-        if not allowed_clients or (tsn and config.isTsnInConfig(tsn)):
+        allowed_clients = getAllowedClients()
+        if not allowed_clients or (tsn and isTsnInConfig(tsn)):
             return True
         client_ip = self.client_address[0]
         for allowedip in allowed_clients:
@@ -332,7 +340,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
 
     def root_container(self) -> None:
         tsn = self.headers.get("TiVo_TCD_ID", "")
-        tsnshares = config.getShares(tsn)
+        tsnshares = getShares(tsn)
         tsncontainers = []
         for section, settings in tsnshares:
             try:
@@ -357,12 +365,12 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         t = Template(file=os.path.join(SCRIPTDIR, "templates", "info_page.tmpl"))
         t.admin = ""
 
-        if config.get_server("tivo_mak", "") and config.get_server("togo_path", ""):
+        if get_server("tivo_mak", "") and get_server("togo_path", ""):
             t.togo = "<br>Pull from TiVos:<br>"
         else:
             t.togo = ""
 
-        for section, settings in config.getShares():
+        for section, settings in getShares():
             plugin_type = settings.get("type")
             if plugin_type == "settings":
                 t.admin += (
@@ -372,16 +380,16 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                     + '">Settings</a><br>'
                 )
             elif plugin_type == "togo" and t.togo:
-                for tsn in config.tivos:
-                    if tsn and "address" in config.tivos[tsn]:
+                for tsn in TIVOS:
+                    if tsn and "address" in TIVOS[tsn]:
                         t.togo += (
                             '<a href="/TiVoConnect?'
                             + "Command=NPL&amp;Container="
                             + quote(section)
                             + "&amp;TiVo="
-                            + config.tivos[tsn]["address"]
+                            + TIVOS[tsn]["address"]
                             + '">'
-                            + config.tivos[tsn]["name"]
+                            + TIVOS[tsn]["name"]
                             + "</a><br>"
                         )
 

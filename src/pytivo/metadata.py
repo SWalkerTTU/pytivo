@@ -19,9 +19,9 @@ except:
 
 import mutagen  # type: ignore
 
-import config
-import plugins.video.transcode
-import turing
+from pytivo.config import get_bin, get_server, init
+from pytivo.plugins.video.transcode import video_info
+from pytivo.turing import Turing
 
 # Something to strip
 TRIBUNE_CR = " Copyright Tribune Media Services, Inc."
@@ -840,15 +840,15 @@ def _tdcat_py(full_path: str, tivo_mak: str) -> str:
         turkey = hashlib.sha1(key[:17]).digest()
         turiv = hashlib.sha1(key).digest()
 
-        details = turing.Turing(turkey, turiv).crypt(details, chunk["start"])
+        details = Turing(turkey, turiv).crypt(details, chunk["start"])
 
     return details
 
 
 @lru_cache(maxsize=64)
 def from_tivo(full_path: str) -> Dict[str, str]:
-    tdcat_path = config.get_bin("tdcat")
-    tivo_mak = config.get_server("tivo_mak", "")
+    tdcat_path = get_bin("tdcat")
+    tivo_mak = get_server("tivo_mak", "")
     try:
         assert tivo_mak
         if tdcat_path:
@@ -882,7 +882,7 @@ def dump(output: TextIO, metadata: Dict[str, Any]) -> None:
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         metadata: Dict[str, Any] = {}
-        config.init([])
+        init([])
         logging.basicConfig()
         fname = force_utf8(sys.argv[1])
         ext = os.path.splitext(fname)[1].lower()
@@ -893,6 +893,6 @@ if __name__ == "__main__":
         elif ext in [".dvr-ms", ".asf", ".wmv"]:
             metadata.update(from_dvrms(fname))
         elif ext == ".wtv":
-            vInfo = plugins.video.transcode.video_info(fname)
+            vInfo = video_info(fname)
             metadata.update(from_mscore(vInfo.rawmeta))
         dump(sys.stdout, metadata)

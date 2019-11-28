@@ -11,29 +11,29 @@ from configparser import NoOptionError
 from functools import reduce
 from typing import Dict, List, Optional, Tuple
 
-from pytivo_types import Bdict, Settings
+from pytivo.pytivo_types import Bdict, Settings
 
-tivos: Dict[str, Settings]
-guid: uuid.UUID
-config_files: List[str]
-tivos_found: bool
-bin_paths: Dict[str, str]
-config: configparser.ConfigParser
-configs_found: List[str]
+TIVOS: Dict[str, Settings]
+GUID: uuid.UUID
+CONFIG_FILES: List[str]
+TIVOS_FOUND: bool
+BIN_PATHS: Dict[str, str]
+CONFIG: configparser.ConfigParser
+CONFIGS_FOUND: List[str]
 
 
 def init(argv: List[str]) -> None:
-    global tivos
-    global guid
-    global config_files
-    global tivos_found
+    global TIVOS
+    global GUID
+    global CONFIG_FILES
+    global TIVOS_FOUND
 
-    tivos = {}
-    guid = uuid.uuid4()
-    tivos_found = False
+    TIVOS = {}
+    GUID = uuid.uuid4()
+    TIVOS_FOUND = False
 
     p = os.path.dirname(__file__)
-    config_files = ["/etc/pyTivo.conf", os.path.join(p, "pyTivo.conf")]
+    CONFIG_FILES = ["/etc/pyTivo.conf", os.path.join(p, "pyTivo.conf")]
 
     try:
         opts, _ = getopt.getopt(argv, "c:e:", ["config=", "extraconf="])
@@ -42,66 +42,66 @@ def init(argv: List[str]) -> None:
 
     for opt, value in opts:
         if opt in ("-c", "--config"):
-            config_files = [value]
+            CONFIG_FILES = [value]
         elif opt in ("-e", "--extraconf"):
-            config_files.append(value)
+            CONFIG_FILES.append(value)
 
     reset()
 
 
 def reset() -> None:
-    global bin_paths
-    global config
-    global configs_found
-    global tivos_found
+    global BIN_PATHS
+    global CONFIG
+    global CONFIGS_FOUND
+    global TIVOS_FOUND
 
-    bin_paths = {}
+    BIN_PATHS = {}
 
-    config = configparser.ConfigParser()
-    configs_found = config.read(config_files)
-    if not configs_found:
+    CONFIG = configparser.ConfigParser()
+    CONFIGS_FOUND = CONFIG.read(CONFIG_FILES)
+    if not CONFIGS_FOUND:
         print(("WARNING: pyTivo.conf does not exist.\n" + "Assuming default values."))
-        configs_found = config_files[-1:]
+        CONFIGS_FOUND = CONFIG_FILES[-1:]
 
-    for section in config.sections():
+    for section in CONFIG.sections():
         if section.startswith("_tivo_"):
             tsn = section[6:]
             if tsn.upper() not in ["SD", "HD", "4K"]:
-                tivos_found = True
-                tivos[tsn] = Bdict(config.items(section))
+                TIVOS_FOUND = True
+                TIVOS[tsn] = Bdict(CONFIG.items(section))
 
     for section in ["Server", "_tivo_SD", "_tivo_HD"]:
-        if not config.has_section(section):
-            config.add_section(section)
+        if not CONFIG.has_section(section):
+            CONFIG.add_section(section)
 
 
 def write() -> None:
-    f = open(configs_found[-1], "w")
-    config.write(f)
+    f = open(CONFIGS_FOUND[-1], "w")
+    CONFIG.write(f)
     f.close()
 
 
 def tivos_by_ip(tivoIP: str) -> str:
-    for key, value in list(tivos.items()):
+    for key, value in list(TIVOS.items()):
         if value["address"] == tivoIP:
             return key
     return ""
 
 
 def get_server(name: str, default: str) -> str:
-    if config.has_option("Server", name):
-        return config.get("Server", name)
+    if CONFIG.has_option("Server", name):
+        return CONFIG.get("Server", name)
     else:
         return default
 
 
 def getGUID() -> str:
-    return str(guid)
+    return str(GUID)
 
 
 def get_ip(tsn: Optional[str] = None) -> str:
     if tsn is not None:
-        dest_ip = tivos[tsn]["address"]
+        dest_ip = TIVOS[tsn]["address"]
     else:
         dest_ip = "4.2.2.1"
 
@@ -114,9 +114,9 @@ def get_zc() -> bool:
     opt = get_server("zeroconf", "auto").lower()
 
     if opt == "auto":
-        for section in config.sections():
+        for section in CONFIG.sections():
             if section.startswith("_tivo_"):
-                if config.has_option(section, "shares"):
+                if CONFIG.has_option(section, "shares"):
                     logger = logging.getLogger("pyTivo.config")
                     logger.info("Shares security in use -- zeroconf disabled")
                     return False
@@ -149,10 +149,10 @@ def get169Setting(tsn: str) -> bool:
         return True
 
     tsnsect = "_tivo_" + tsn
-    if config.has_section(tsnsect):
-        if config.has_option(tsnsect, "aspect169"):
+    if CONFIG.has_section(tsnsect):
+        if CONFIG.has_option(tsnsect, "aspect169"):
             try:
-                return config.getboolean(tsnsect, "aspect169")
+                return CONFIG.getboolean(tsnsect, "aspect169")
             except ValueError:
                 pass
 
@@ -168,10 +168,10 @@ def getAllowedClients() -> List[str]:
 
 def getIsExternal(tsn: str) -> bool:
     tsnsect = "_tivo_" + tsn
-    if tsnsect in config.sections():
-        if config.has_option(tsnsect, "external"):
+    if tsnsect in CONFIG.sections():
+        if CONFIG.has_option(tsnsect, "external"):
             try:
-                return config.getboolean(tsnsect, "external")
+                return CONFIG.getboolean(tsnsect, "external")
             except ValueError:
                 pass
 
@@ -179,13 +179,13 @@ def getIsExternal(tsn: str) -> bool:
 
 
 def isTsnInConfig(tsn: str) -> bool:
-    return ("_tivo_" + tsn) in config.sections()
+    return ("_tivo_" + tsn) in CONFIG.sections()
 
 
 def getShares(tsn: str = "") -> List[Tuple[str, Settings]]:
     shares = [
-        (section, Bdict(config.items(section)))
-        for section in config.sections()
+        (section, Bdict(CONFIG.items(section)))
+        for section in CONFIG.sections()
         if not (
             section.startswith(("_tivo_", "logger_", "handler_", "formatter_"))
             or section in ("Server", "loggers", "handlers", "formatters")
@@ -193,13 +193,13 @@ def getShares(tsn: str = "") -> List[Tuple[str, Settings]]:
     ]
 
     tsnsect = "_tivo_" + tsn
-    if config.has_section(tsnsect) and config.has_option(tsnsect, "shares"):
+    if CONFIG.has_section(tsnsect) and CONFIG.has_option(tsnsect, "shares"):
         # clean up leading and trailing spaces & make sure ref is valid
         tsnshares = []
-        for x in config.get(tsnsect, "shares").split(","):
+        for x in CONFIG.get(tsnsect, "shares").split(","):
             y = x.strip()
-            if config.has_section(y):
-                tsnshares.append((y, Bdict(config.items(y))))
+            if CONFIG.has_section(y):
+                tsnshares.append((y, Bdict(CONFIG.items(y))))
         shares = tsnshares
 
     shares.sort()
@@ -214,36 +214,36 @@ def getShares(tsn: str = "") -> List[Tuple[str, Settings]]:
 
 def getDebug() -> bool:
     try:
-        return config.getboolean("Server", "debug")
+        return CONFIG.getboolean("Server", "debug")
     except:
         return False
 
 
 def getOptres(tsn: str) -> bool:
     try:
-        return config.getboolean("_tivo_" + tsn, "optres")
+        return CONFIG.getboolean("_tivo_" + tsn, "optres")
     except:
         try:
-            return config.getboolean(get_section(tsn), "optres")
+            return CONFIG.getboolean(get_section(tsn), "optres")
         except:
             try:
-                return config.getboolean("Server", "optres")
+                return CONFIG.getboolean("Server", "optres")
             except:
                 return False
 
 
 def get_bin(fname: str) -> Optional[str]:
-    global bin_paths
+    global BIN_PATHS
 
     logger = logging.getLogger("pyTivo.config")
 
-    if fname in bin_paths:
-        return bin_paths[fname]
+    if fname in BIN_PATHS:
+        return BIN_PATHS[fname]
 
-    if config.has_option("Server", fname):
-        fpath = config.get("Server", fname)
+    if CONFIG.has_option("Server", fname):
+        fpath = CONFIG.get("Server", fname)
         if os.path.exists(fpath) and os.path.isfile(fpath):
-            bin_paths[fname] = fpath
+            BIN_PATHS[fname] = fpath
             return fpath
         else:
             logger.error("Bad %s path: %s" % (fname, fpath))
@@ -261,7 +261,7 @@ def get_bin(fname: str) -> Optional[str]:
     for path in [os.path.join(os.path.dirname(__file__), "bin")] + sys_path_list:
         fpath = os.path.join(path, fname + fext)
         if os.path.exists(fpath) and os.path.isfile(fpath):
-            bin_paths[fname] = fpath
+            BIN_PATHS[fname] = fpath
             return fpath
 
     logger.warn("%s not found" % fname)
@@ -269,8 +269,8 @@ def get_bin(fname: str) -> Optional[str]:
 
 
 def getFFmpegWait() -> int:
-    if config.has_option("Server", "ffmpeg_wait"):
-        return max(int(float(config.get("Server", "ffmpeg_wait"))), 1)
+    if CONFIG.has_option("Server", "ffmpeg_wait"):
+        return max(int(float(CONFIG.get("Server", "ffmpeg_wait"))), 1)
     else:
         return 0
 
@@ -382,13 +382,13 @@ def get_section(tsn: str) -> str:
 
 def get_tsn(name: str, tsn: str, raw: bool = False) -> Optional[str]:
     try:
-        return config.get("_tivo_" + tsn, name, raw=raw)
+        return CONFIG.get("_tivo_" + tsn, name, raw=raw)
     except:
         try:
-            return config.get(get_section(tsn), name, raw=raw)
+            return CONFIG.get(get_section(tsn), name, raw=raw)
         except:
             try:
-                return config.get("Server", name, raw=raw)
+                return CONFIG.get("Server", name, raw=raw)
             except:
                 return None
 
@@ -441,11 +441,11 @@ def strtod(value_str: str) -> int:
 
 def init_logging() -> None:
     if (
-        config.has_section("loggers")
-        and config.has_section("handlers")
-        and config.has_section("formatters")
+        CONFIG.has_section("loggers")
+        and CONFIG.has_section("handlers")
+        and CONFIG.has_section("formatters")
     ):
-        logging.config.fileConfig(config)
+        logging.config.fileConfig(CONFIG)
 
     elif getDebug():
         logging.basicConfig(level=logging.DEBUG)

@@ -10,11 +10,11 @@ from http.server import BaseHTTPRequestHandler
 
 from Cheetah.Filters import Filter  # type: ignore
 
-from lrucache import LRUCache
-from pytivo_types import Query, FileData, FileDataLike
+from pytivo.lrucache import LRUCache
+from pytivo.pytivo_types import Query, FileData, FileDataLike
 
 if TYPE_CHECKING:
-    from httpserver import TivoHTTPHandler
+    from pytivo.httpserver import TivoHTTPHandler
 
 
 def no_anchor(handler: "TivoHTTPHandler", anchor: str) -> None:

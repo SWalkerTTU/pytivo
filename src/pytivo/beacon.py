@@ -10,9 +10,19 @@ from typing import List, Dict, Optional
 
 import zeroconf
 
-import config
-from plugin import GetPlugin
-from pytivo_types import Bdict
+from pytivo.config import (
+    TIVOS,
+    TIVOS_FOUND,
+    getBeaconAddresses,
+    getGUID,
+    getPort,
+    getShares,
+    get_ip,
+    get_server,
+    get_zc,
+)
+from pytivo.plugin import GetPlugin
+from pytivo.pytivo_types import Bdict
 
 SHARE_TEMPLATE = "/TiVoConnect?Command=QueryContainer&Container=%s"
 PLATFORM_MAIN = "pyTivo"
@@ -41,10 +51,10 @@ class ZCBroadcast:
         self.rz = zeroconf.Zeroconf()
         self.renamed: Dict[str, str] = {}
         old_titles = self.scan()
-        address = socket.inet_aton(config.get_ip())
-        port = int(config.getPort())
+        address = socket.inet_aton(get_ip())
+        port = int(getPort())
         logger.info("Announcing shares...")
-        for section, settings in config.getShares():
+        for section, settings in getShares():
             try:
                 ct = GetPlugin(settings["type"]).CONTENT_TYPE
             except:
@@ -96,7 +106,7 @@ class ZCBroadcast:
 
         # any results?
         if names:
-            config.tivos_found = True
+            TIVOS_FOUND = True
 
         # Now get the addresses -- this is the slow part
         for name in names:
@@ -106,10 +116,8 @@ class ZCBroadcast:
                 if tsn is not None:
                     address = socket.inet_ntoa(info.address)
                     port = info.port
-                    config.tivos[tsn] = Bdict(
-                        {"name": name, "address": address, "port": port}
-                    )
-                    config.tivos[tsn].update(info.properties)
+                    TIVOS[tsn] = Bdict({"name": name, "address": address, "port": port})
+                    TIVOS[tsn].update(info.properties)
                     self.logger.info(name)
 
         return names
@@ -129,7 +137,7 @@ class Beacon:
         self.bd: Optional[ZCBroadcast]
 
         self.platform = PLATFORM_VIDEO
-        for section, settings in config.getShares():
+        for section, settings in getShares():
             try:
                 ct = GetPlugin(settings["type"]).CONTENT_TYPE
             except:
@@ -138,7 +146,7 @@ class Beacon:
                 self.platform = PLATFORM_MAIN
                 break
 
-        if config.get_zc():
+        if get_zc():
             logger = logging.getLogger("pyTivo.beacon")
             try:
                 self.bd = ZCBroadcast(logger)
@@ -159,7 +167,7 @@ class Beacon:
         beacon = [
             b"tivoconnect=1",
             b"method=%s" % conntype,
-            b"identity={%s}" % bytes(config.getGUID(), "utf-8"),
+            b"identity={%s}" % bytes(getGUID(), "utf-8"),
             b"machine=%s" % bytes(socket.gethostname(), "utf-8"),
             b"platform=%s" % bytes(self.platform, "utf-8"),
         ]
@@ -172,7 +180,7 @@ class Beacon:
         return b"\n".join(beacon) + b"\n"
 
     def send_beacon(self) -> None:
-        beacon_ips = config.getBeaconAddresses()
+        beacon_ips = getBeaconAddresses()
         beacon = self.format_beacon(b"broadcast")
         for beacon_ip in beacon_ips.split():
             if beacon_ip != "listen":
@@ -257,7 +265,7 @@ class Beacon:
 
 def tsn_from_service_info(info) -> Optional[str]:
     tsn = info.properties.get(b"TSN")
-    if config.get_server("togo_all", ""):
+    if get_server("togo_all", ""):
         tsn = info.properties.get(b"tsn", tsn)
 
     if tsn is None:

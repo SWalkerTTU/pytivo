@@ -16,14 +16,14 @@ from mutagen.easyid3 import EasyID3  # type: ignore
 from mutagen.mp3 import MP3  # type: ignore
 from Cheetah.Template import Template  # type: ignore
 
-from lrucache import LRUCache
-import config
-from plugin import Plugin, quote, unquote, SortList, read_tmpl
-from plugins.video.transcode import kill
-from pytivo_types import Query, FileData
+from pytivo.lrucache import LRUCache
+from pytivo.config import get_bin
+from pytivo.plugin import Plugin, SortList, quote, read_tmpl, unquote
+from pytivo.plugins.video.transcode import kill
+from pytivo.pytivo_types import Query, FileData
 
 if TYPE_CHECKING:
-    from httpserver import TivoHTTPHandler
+    from pytivo.httpserver import TivoHTTPHandler
 
 SCRIPTDIR = os.path.dirname(__file__)
 
@@ -149,9 +149,7 @@ class Music(Plugin):
     def send_file(self, handler: "TivoHTTPHandler", path: str, query: Query) -> None:
         seek = int(query.get("Seek", ["0"])[0])
         duration = int(query.get("Duration", ["0"])[0])
-        always = handler.container.getboolean("force_ffmpeg") and config.get_bin(
-            "ffmpeg"
-        )
+        always = handler.container.getboolean("force_ffmpeg") and get_bin("ffmpeg")
 
         ext = os.path.splitext(path)[1].lower()
         needs_transcode = ext in TRANSCODE or seek or duration or always
@@ -161,7 +159,7 @@ class Music(Plugin):
             handler.send_response(200)
             handler.send_header("Content-Length", str(fsize))
         else:
-            if config.get_bin("ffmpeg") is None:
+            if get_bin("ffmpeg") is None:
                 handler.server.logger.error("ffmpeg is not found.  Aborting transcode.")
                 return
             handler.send_response(206)
@@ -171,7 +169,7 @@ class Music(Plugin):
 
         if needs_transcode:
             cmd: List[str]
-            cmd = [config.get_bin("ffmpeg"), "-i", path, "-vn"]  # type: ignore
+            cmd = [get_bin("ffmpeg"), "-i", path, "-vn"]  # type: ignore
             if ext in [".mp3", ".mp2"]:
                 cmd += ["-acodec", "copy"]
             else:
@@ -217,7 +215,7 @@ class Music(Plugin):
 
         file_type: Union[bool, str]
 
-        if ext in (".mp3", ".mp2") or (ext in TRANSCODE and config.get_bin("ffmpeg")):
+        if ext in (".mp3", ".mp2") or (ext in TRANSCODE and get_bin("ffmpeg")):
             return self.AUDIO
         else:
             file_type = False
@@ -290,7 +288,7 @@ class Music(Plugin):
         except Exception as msg:
             print(msg)
 
-        ffmpeg_path = config.get_bin("ffmpeg")
+        ffmpeg_path = get_bin("ffmpeg")
         if "Duration" not in item and ffmpeg_path:
             cmd = [ffmpeg_path, "-i", f.name]
             ffmpeg = subprocess.Popen(

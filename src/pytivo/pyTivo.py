@@ -19,9 +19,9 @@ try:
 except:
     pass
 
-import beacon
-import config
-import httpserver
+from pytivo.beacon import Beacon
+from pytivo.config import init, init_logging, getPort, getShares, getBeaconAddresses
+from pytivo.httpserver import TivoHTTPServer, TivoHTTPHandler
 
 
 def exceptionLogger(
@@ -48,27 +48,27 @@ def last_date() -> str:
     return time.asctime(time.localtime(lasttime))
 
 
-def setup(in_service: bool = False) -> httpserver.TivoHTTPServer:
-    config.init(sys.argv[1:])
-    config.init_logging()
+def setup(in_service: bool = False) -> TivoHTTPServer:
+    init(sys.argv[1:])
+    init_logging()
     sys.excepthook = exceptionLogger
 
-    port = config.getPort()
+    port = getPort()
 
-    httpd = httpserver.TivoHTTPServer(("", int(port)), httpserver.TivoHTTPHandler)
+    httpd = TivoHTTPServer(("", int(port)), TivoHTTPHandler)
 
     logger = logging.getLogger("pyTivo")
     logger.info("Last modified: " + last_date())
     logger.info("Python: " + platform.python_version())
     logger.info("System: " + platform.platform())
 
-    for section, settings in config.getShares():
+    for section, settings in getShares():
         httpd.add_container(section, settings)
 
-    b = beacon.Beacon()
+    b = Beacon()
     b.add_service(b"TiVoMediaServer:%d/http" % int(port))
     b.start()
-    if "listen" in config.getBeaconAddresses():
+    if "listen" in getBeaconAddresses():
         b.listen()
 
     httpd.set_beacon(b)
@@ -78,7 +78,7 @@ def setup(in_service: bool = False) -> httpserver.TivoHTTPServer:
     return httpd
 
 
-def serve(httpd: httpserver.TivoHTTPServer) -> None:
+def serve(httpd: TivoHTTPServer) -> None:
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
