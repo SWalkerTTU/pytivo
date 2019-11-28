@@ -9,7 +9,7 @@ import win32event
 import win32service
 import win32serviceutil
 
-from pytivo.pyTivo import setup
+from pytivo.main import setup
 
 
 class PyTivoService(win32serviceutil.ServiceFramework):
