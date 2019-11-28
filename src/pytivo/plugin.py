@@ -21,11 +21,6 @@ def no_anchor(handler: "TivoHTTPHandler", anchor: str) -> None:
     handler.server.logger.warning("Anchor not found: " + anchor)
 
 
-def read_tmpl(filename):
-    with open(filename, "r") as tmpl_fh:
-        return tmpl_fh.read()
-
-
 # TODO 20191125 Maybe omit file_type if no filter functions use it?
 def build_recursive_list(
     path: str,

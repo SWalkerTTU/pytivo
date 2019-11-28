@@ -59,7 +59,6 @@ from pytivo.plugin import (
     SortList,
     build_recursive_list,
     quote,
-    read_tmpl,
     unquote,
 )
 from pytivo.plugins.video.transcode import kill
@@ -104,8 +103,12 @@ exif_orient_m = re.compile(b"\x01\x12\x00\x03\x00\x00\x00\x01\x00(.)\x00\x00").s
 ffmpeg_size = re.compile(r".*Video: .+, (\d+)x(\d+)[, ].*")
 
 # Preload the template
-PHOTO_TEMPLATE = read_tmpl(os.path.join(SCRIPTDIR, "templates", "container.tmpl"))
-ITEM_TEMPLATE = read_tmpl(os.path.join(SCRIPTDIR, "templates", "item.tmpl"))
+PHOTO_CONTAINER_TCLASS = Template.compile(
+    file=os.path.join(SCRIPTDIR, "templates", "container.tmpl")
+)
+PHOTO_ITEM_TCLASS = Template.compile(
+    file=os.path.join(SCRIPTDIR, "templates", "item.tmpl")
+)
 
 JFIF_TAG = b"\xff\xe0\x00\x10JFIF\x00\x01\x02\x00\x00\x01\x00\x01\x00\x00"
 
@@ -492,7 +495,7 @@ class Photo(Plugin):
             handler.send_error(404)
             return
 
-        t = Template(PHOTO_TEMPLATE)
+        t = PHOTO_CONTAINER_TCLASS()
         t.name = query["Container"][0]
         t.container = handler.cname
         t.files, t.total, t.start = self.get_files(handler, query, ImageFileFilter)
@@ -510,7 +513,7 @@ class Photo(Plugin):
         path = os.path.join(handler.container["path"], *splitpath[1:])
 
         if path in self.media_data_cache:
-            t = Template(ITEM_TEMPLATE)
+            t = PHOTO_ITEM_TCLASS()
             t.file = self.media_data_cache[path]
             t.escape = escape
             handler.send_xml(str(t))

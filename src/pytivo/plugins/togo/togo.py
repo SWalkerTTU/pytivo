@@ -24,7 +24,7 @@ from pytivo.config import (
     tivos_by_ip,
 )
 from pytivo.metadata import dump, from_container, from_details, human_size, tag_data
-from pytivo.plugin import Plugin, read_tmpl
+from pytivo.plugin import Plugin
 from pytivo.pytivo_types import Query
 
 if TYPE_CHECKING:
@@ -77,7 +77,7 @@ incorrect Media Access Key. Please return to the Settings page and
 double check your <b>tivo_mak</b> setting.</p> <pre>%s</pre>"""
 
 # Preload the templates
-NPL_TEMPLATE = read_tmpl(os.path.join(SCRIPTDIR, "templates", "npl.tmpl"))
+NPL_TCLASS = Template.compile(file=os.path.join(SCRIPTDIR, "templates", "npl.tmpl"))
 
 MSWINDOWS = sys.platform == "win32"
 
@@ -280,7 +280,7 @@ class ToGo(Plugin):
             ItemCount = 0
             title = ""
 
-        t = Template(NPL_TEMPLATE)
+        t = NPL_TCLASS()
         t.quote = quote
         t.folder = folder
         t.status = STATUS

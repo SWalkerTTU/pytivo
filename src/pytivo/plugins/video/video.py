@@ -48,7 +48,7 @@ from pytivo.plugins.video.transcode import (
     transcode,
     transcode_settings,
 )
-from pytivo.plugin import Plugin, quote, read_tmpl
+from pytivo.plugin import Plugin, quote
 from pytivo.pytivo_types import Query
 
 if TYPE_CHECKING:
@@ -61,10 +61,10 @@ SCRIPTDIR = os.path.dirname(__file__)
 CLASS_NAME = "Video"
 
 # Preload the templates
-XML_CONTAINER_TEMPLATE = read_tmpl(
-    os.path.join(SCRIPTDIR, "templates", "container_xml.tmpl")
+VIDEO_CONTAINER_XML_TCLASS = Template.compile(
+    file=os.path.join(SCRIPTDIR, "templates", "container_xml.tmpl")
 )
-TVBUS_TEMPLATE = read_tmpl(os.path.join(SCRIPTDIR, "templates", "TvBus.tmpl"))
+TVBUS_TCLASS = Template.compile(file=os.path.join(SCRIPTDIR, "templates", "TvBus.tmpl"))
 
 EXTENSIONS = """.tivo .mpg .avi .wmv .mov .flv .f4v .vob .mp4 .m4v .mkv
 .ts .tp .trp .3g2 .3gp .3gp2 .3gpp .amv .asf .avs .bik .bix .box .bsf
@@ -420,12 +420,16 @@ class Video(Plugin):
         else:
             allow_recurse = ar in ("1", "yes", "true", "on")
 
+        start_time2 = time.time()
         files, total, start = self.get_files(
             handler, query, self.video_file_filter, force_alpha, allow_recurse
         )
+        end_time_ms = (time.time() - start_time2) * 1000
+        LOGGER.info(f"get_files: {end_time_ms:.1f}ms")
 
         videos = []
         local_base_path = self.get_local_base_path(handler, query)
+        start_time3 = time.time()
         for f in files:
             video = VideoDetails()
             mtime = f.mdate
@@ -466,11 +470,13 @@ class Video(Plugin):
                 video["textSize"] = human_size(f.size)
 
             videos.append(video)
+        end_time_ms = (time.time() - start_time3) * 1000
+        LOGGER.info(f"for f in files: {end_time_ms:.1f}ms")
 
         def crc_str(in_str: str) -> int:
             return zlib.crc32(in_str.encode("utf-8"))
 
-        t = Template(XML_CONTAINER_TEMPLATE)
+        t = VIDEO_CONTAINER_XML_TCLASS()
         t.container = handler.cname
         t.name = subcname
         t.total = total
@@ -478,7 +484,6 @@ class Video(Plugin):
         t.videos = videos
         t.quote = quote
         t.escape = escape
-        # t.crc = zlib.crc32 # applied to (guid + name) and (guid + video.name)
         t.crc = crc_str  # applied to (guid + name) and (guid + video.name)
         t.guid = getGUID()
         t.tivos = TIVOS
@@ -516,7 +521,7 @@ class Video(Plugin):
             if file_info["valid"]:
                 file_info.update(self.metadata_full(file_path, tsn))
 
-            t = Template(TVBUS_TEMPLATE)
+            t = TVBUS_TCLASS()
             t.video = file_info
             t.escape = escape
             t.get_tv = get_tv

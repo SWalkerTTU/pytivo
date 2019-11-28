@@ -10,3 +10,4 @@ fix filter_types in QueryContainer
 Fix AudioFileFilter
 See if one can precompile Templates (without options)
 f-strings
+pre-index all files in all shares for speed?

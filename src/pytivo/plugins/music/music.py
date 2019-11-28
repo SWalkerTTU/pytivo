@@ -18,7 +18,7 @@ from Cheetah.Template import Template  # type: ignore
 
 from pytivo.lrucache import LRUCache
 from pytivo.config import get_bin
-from pytivo.plugin import Plugin, SortList, quote, read_tmpl, unquote
+from pytivo.plugin import Plugin, SortList, quote, unquote
 from pytivo.plugins.video.transcode import kill
 from pytivo.pytivo_types import Query, FileData
 
@@ -67,9 +67,11 @@ plslength = re.compile("[Ll]ength(\d+)=(\d+)").match
 durre = re.compile(r".*Duration: ([0-9]+):([0-9]+):([0-9]+)\.([0-9]+),").search
 
 # Preload the templates
-FOLDER_TEMPLATE = read_tmpl(os.path.join(SCRIPTDIR, "templates", "container.tmpl"))
-PLAYLIST_TEMPLATE = read_tmpl(os.path.join(SCRIPTDIR, "templates", "m3u.tmpl"))
-ITEM_TEMPLATE = read_tmpl(os.path.join(SCRIPTDIR, "templates", "item.tmpl"))
+MUSIC_CONTAINER_TCLASS = Template.compile(
+    file=os.path.join(SCRIPTDIR, "templates", "container.tmpl")
+)
+MUSIC_M3U_TCLASS = Template.compile(file=os.path.join(SCRIPTDIR, "templates", "m3u.tmpl"))
+MUSIC_ITEM_TCLASS = Template.compile(file=os.path.join(SCRIPTDIR, "templates", "item.tmpl"))
 
 # TODO: No more subprocess.Popen._make_inheritable, need to verify on Windows
 ## XXX BIG HACK
@@ -331,10 +333,10 @@ class Music(Plugin):
             return
 
         if os.path.splitext(subcname)[1].lower() in PLAYLISTS:
-            t = Template(PLAYLIST_TEMPLATE)
+            t = MUSIC_M3U_TCLASS()
             t.files, t.total, t.start = self.get_playlist(handler, query)
         else:
-            t = Template(FOLDER_TEMPLATE)
+            t = MUSIC_CONTAINER_TCLASS()
             t.files, t.total, t.start = self.get_files(
                 handler, query, self.AudioFileFilter
             )
@@ -355,7 +357,7 @@ class Music(Plugin):
         path = os.path.join(handler.container["path"], *splitpath[1:])
 
         if path in self.media_data_cache:
-            t = Template(ITEM_TEMPLATE)
+            t = MUSIC_ITEM_TCLASS()
             t.file = self.media_data_cache[path]
             t.escape = escape
             handler.send_xml(str(t))
