@@ -184,9 +184,7 @@ class Video(Plugin):
             mime = query["Format"][0]
 
         needs_tivodecode = is_tivo_file and mime == "video/mpeg"
-        compatible = (
-            not needs_tivodecode and tivo_compatible(path, tsn, mime)[0]
-        )
+        compatible = not needs_tivodecode and tivo_compatible(path, tsn, mime)[0]
 
         try:  # "bytes=XXX-"
             offset = int(handler.headers.get("Range")[6:-1])
@@ -345,9 +343,7 @@ class Video(Plugin):
             if compatible:
                 transcode_options: List[str] = []
             else:
-                transcode_options = transcode_settings(
-                    True, full_path, tsn, mime
-                )
+                transcode_options = transcode_settings(True, full_path, tsn, mime)
             data["vHost"] = (
                 ["TRANSCODE=%s, %s" % (["YES", "NO"][compatible], reason)]
                 + ["SOURCE INFO: "]
@@ -406,6 +402,7 @@ class Video(Plugin):
         return data
 
     def QueryContainer(self, handler: "TivoHTTPHandler", query: Query) -> None:
+        start_time = time.time()
         tsn = handler.headers.get("tsn", "")
         subcname = query["Container"][0]
         # e.g. Filter =
@@ -486,6 +483,8 @@ class Video(Plugin):
         t.guid = getGUID()
         t.tivos = TIVOS
         handler.send_xml(str(t))
+        end_time_ms = (time.time() - start_time) * 1000
+        LOGGER.info(f"QueryContainer: {end_time_ms:.1f}ms")
 
     def use_ts(self, tsn: str, file_path: str) -> bool:
         if is_ts_capable(tsn):

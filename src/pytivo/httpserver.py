@@ -66,7 +66,7 @@ class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         self, server_address: Tuple[str, int], RequestHandlerClass: type
     ) -> None:
         self.containers: Dict[str, Settings] = {}
-        self.beacon = Beacon()  # TODO 20191123 think about: set empty beacon to start
+        self.beacon: Optional[Beacon] = None
         self.stop = False
         self.restart = False
         self.logger = logging.getLogger("pyTivo")
@@ -130,6 +130,8 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
             if "address" not in attr:
                 attr["address"] = self.address_string()
             if "name" not in attr:
+                if self.server.beacon is None:
+                    raise Exception("No self.server.beacon")
                 attr["name"] = self.server.beacon.get_name(attr["address"])
             TIVOS[tsn] = attr
 
@@ -351,6 +353,10 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
             except Exception as msg:
                 self.server.logger.error(section + " - " + str(msg), exc_info=True)
         t = Template(file=os.path.join(SCRIPTDIR, "templates", "root_container.tmpl"))
+
+        if self.server.beacon is None:
+            raise Exception("No self.server.beacon")
+
         if self.server.beacon.bd:
             t.renamed = self.server.beacon.bd.renamed
         else:

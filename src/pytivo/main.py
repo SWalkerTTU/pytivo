@@ -56,7 +56,7 @@ def setup(in_service: bool = False) -> TivoHTTPServer:
     port = getPort()
 
     httpd = TivoHTTPServer(("", int(port)), TivoHTTPHandler)
-
+    print("after TivoHTTPServer, before logging.getLogger in main.py")
     logger = logging.getLogger("pyTivo")
     logger.info("Last modified: " + last_date())
     logger.info("Python: " + platform.python_version())
@@ -88,7 +88,8 @@ def serve(httpd: TivoHTTPServer) -> None:
 def mainloop() -> bool:
     httpd = setup()
     serve(httpd)
-    httpd.beacon.stop()
+    if httpd.beacon is not None:
+        httpd.beacon.stop()
     return httpd.restart
 
 
