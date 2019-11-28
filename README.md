@@ -27,7 +27,7 @@ the rest of your system python, and puts the `pytivo` app executable in your
 user binary path.
 
 ```bash
-pipx install --spec https://github.com/itsayellow/pytivo.git pytivo
+pipx install --spec https://github.com/itsayellow/pytivo pytivo
 ```
 
 After using this pipx install method, you should be able to execute the
