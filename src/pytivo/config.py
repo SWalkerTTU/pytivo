@@ -13,13 +13,13 @@ from typing import Dict, List, Optional, Tuple
 
 from pytivo.pytivo_types import Bdict, Settings
 
-TIVOS: Dict[str, Settings]
-GUID: uuid.UUID
-CONFIG_FILES: List[str]
-TIVOS_FOUND: bool
-BIN_PATHS: Dict[str, str]
-CONFIG: configparser.ConfigParser
-CONFIGS_FOUND: List[str]
+TIVOS: Dict[str, Settings] = {}
+GUID = uuid.uuid4()
+CONFIG_FILES: List[str] = []
+TIVOS_FOUND = False
+BIN_PATHS: Dict[str, str] = {}
+CONFIG = configparser.ConfigParser()
+CONFIGS_FOUND: List[str] = []
 
 
 def init(argv: List[str]) -> None:
