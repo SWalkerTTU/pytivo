@@ -9,7 +9,7 @@ from typing import Callable, Type
 from types import TracebackType
 
 if sys.version_info[0] != 3 or sys.version_info[1] < 6:
-    print ('ERROR: pyTivo requires Python >= 3.6.\n')
+    print("ERROR: pyTivo requires Python >= 3.6.\n")
     sys.exit(1)
 
 try:
@@ -92,6 +92,10 @@ def mainloop() -> bool:
     return httpd.restart
 
 
-if __name__ == "__main__":
+def cli():
     while mainloop():
         time.sleep(5)
+
+
+if __name__ == "__main__":
+    cli()
