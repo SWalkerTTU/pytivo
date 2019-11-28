@@ -24,6 +24,6 @@ setup(
     packages=["pytivo"],
     package_dir={"": "src"},
     install_requires=["mutagen", "Cheetah3", "zeroconf", "Pillow"],
-    entry_points={"console_scripts": ["pytivo=pytivo.pyTivo:cli"]},
+    entry_points={"console_scripts": ["pytivo=pytivo.main:cli"]},
     python_requires=">=3.6",
 )
