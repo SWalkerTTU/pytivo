@@ -32,7 +32,7 @@ def init(argv: List[str]) -> None:
     GUID = uuid.uuid4()
     TIVOS_FOUND = False
 
-    p = os.path.dirname(__file__)
+    p = os.getcwd()
     CONFIG_FILES = ["/etc/pyTivo.conf", os.path.join(p, "pyTivo.conf")]
 
     try:
