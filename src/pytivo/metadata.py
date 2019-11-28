@@ -17,10 +17,6 @@ from typing import Dict, Any, Optional, NamedTuple, List, Tuple, TextIO
 from xml.dom import minidom  # type: ignore
 from xml.parsers import expat
 
-INFO_CACHE = LRUCache(1000)
-LOGGER = logging.getLogger("pyTivo.metadata")
-
-
 try:
     import plistlib
 except:
@@ -31,6 +27,9 @@ import mutagen  # type: ignore
 from pytivo.config import get_bin, getFFmpegWait, get_server, init
 from pytivo.lrucache import LRUCache
 from pytivo.turing import Turing
+
+INFO_CACHE = LRUCache(1000)
+LOGGER = logging.getLogger("pyTivo.metadata")
 
 
 # Something to strip
