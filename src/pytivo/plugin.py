@@ -81,7 +81,7 @@ class SortList(Generic[FileDataLike]):
 
 def GetPlugin(name: str) -> Union["Plugin", Error]:
     try:
-        module_name = ".".join(["plugins", name, name])
+        module_name = ".".join(["pytivo", "plugins", name, name])
         module = __import__(module_name, globals(), locals(), name)
         # mypy can't find CLASS_NAME for the following
         plugin = getattr(module, module.CLASS_NAME)()  # type: ignore
