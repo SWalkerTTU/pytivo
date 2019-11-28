@@ -39,7 +39,15 @@ from pytivo.metadata import (
     video_info,
     INFO_CACHE,
 )
-from . import transcode
+from pytivo.plugins.video.transcode import (
+    is_resumable,
+    resume_transfer,
+    select_videostr,
+    supported_format,
+    tivo_compatible,
+    transcode,
+    transcode_settings,
+)
 from pytivo.plugin import Plugin, quote, read_tmpl
 from pytivo.pytivo_types import Query
 
@@ -159,7 +167,7 @@ class Video(Plugin):
         if use_extensions:
             return os.path.splitext(full_path)[1].lower() in EXTENSIONS
         else:
-            return transcode.supported_format(full_path)
+            return supported_format(full_path)
 
     def send_file(self, handler: "TivoHTTPHandler", path: str, query: Query) -> None:
         mime = "video/x-tivo-mpeg"
@@ -177,7 +185,7 @@ class Video(Plugin):
 
         needs_tivodecode = is_tivo_file and mime == "video/mpeg"
         compatible = (
-            not needs_tivodecode and transcode.tivo_compatible(path, tsn, mime)[0]
+            not needs_tivodecode and tivo_compatible(path, tsn, mime)[0]
         )
 
         try:  # "bytes=XXX-"
@@ -192,7 +200,7 @@ class Video(Plugin):
 
         if valid and offset:
             valid = (compatible and offset < os.path.getsize(path)) or (
-                not compatible and transcode.is_resumable(path, offset)
+                not compatible and is_resumable(path, offset)
             )
 
         # faking = (mime in ['video/x-tivo-mpeg-ts', 'video/x-tivo-mpeg'] and
@@ -242,9 +250,9 @@ class Video(Plugin):
             else:
                 LOGGER.debug('"%s" is not tivo compatible' % path)
                 if offset:
-                    count = transcode.resume_transfer(path, handler.wfile, offset)
+                    count = resume_transfer(path, handler.wfile, offset)
                 else:
-                    count = transcode.transcode(path, handler.wfile, tsn, mime, thead)
+                    count = transcode(path, handler.wfile, tsn, mime, thead)
         try:
             if not compatible:
                 handler.wfile.write(b"0\r\n\r\n")
@@ -277,7 +285,7 @@ class Video(Plugin):
                     if os.path.splitext(f)[1].lower() in EXTENSIONS:
                         count += 1
                 elif f in INFO_CACHE:
-                    if transcode.supported_format(f):
+                    if supported_format(f):
                         count += 1
         except:
             pass
@@ -286,13 +294,13 @@ class Video(Plugin):
     def __est_size(self, full_path: str, tsn: str = "", mime: str = "") -> int:
         # Size is estimated by taking audio and video bit rate adding 2%
 
-        if transcode.tivo_compatible(full_path, tsn, mime)[0]:
+        if tivo_compatible(full_path, tsn, mime)[0]:
             return os.path.getsize(full_path)
         else:
             # Must be re-encoded
             audioBPS = getMaxAudioBR(tsn) * 1000
             # audioBPS = config.strtod(config.getAudioBR(tsn))
-            videoBPS = transcode.select_videostr(full_path, tsn)
+            videoBPS = select_videostr(full_path, tsn)
             bitrate = audioBPS + videoBPS
             duration = self.__duration(full_path)
             if duration is None:
@@ -333,11 +341,11 @@ class Video(Plugin):
             data["episodeNumber"] = str(ep)
 
         if getDebug() and "vHost" not in data:
-            compatible, reason = transcode.tivo_compatible(full_path, tsn, mime)
+            compatible, reason = tivo_compatible(full_path, tsn, mime)
             if compatible:
                 transcode_options: List[str] = []
             else:
-                transcode_options = transcode.transcode_settings(
+                transcode_options = transcode_settings(
                     True, full_path, tsn, mime
                 )
             data["vHost"] = (
@@ -444,7 +452,7 @@ class Video(Plugin):
                 video["total_items"] = self.__total_items(f.name)
             else:
                 if len(files) == 1 or f.name in INFO_CACHE:
-                    video["valid"] = transcode.supported_format(f.name)
+                    video["valid"] = supported_format(f.name)
                     if video["valid"]:
                         video.update(self.metadata_full(f.name, tsn, mtime=mtime))
                         if len(files) == 1:
@@ -505,7 +513,7 @@ class Video(Plugin):
             details = self.tvbus_cache[(tsn, file_path)]
         else:
             file_info = VideoDetails()
-            file_info["valid"] = transcode.supported_format(file_path)
+            file_info["valid"] = supported_format(file_path)
             if file_info["valid"]:
                 file_info.update(self.metadata_full(file_path, tsn))
 
