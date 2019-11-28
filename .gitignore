@@ -1,3 +1,4 @@
 venv
 .mypy_cache
 pyTivo.conf
+pytivo.egg-info
