@@ -22,7 +22,7 @@ CONFIG = configparser.ConfigParser()
 CONFIGS_FOUND: List[str] = []
 
 
-def init(argv: List[str]) -> None:
+def config_init(argv: List[str]) -> None:
     global TIVOS
     global GUID
     global CONFIG_FILES
@@ -46,10 +46,10 @@ def init(argv: List[str]) -> None:
         elif opt in ("-e", "--extraconf"):
             CONFIG_FILES.append(value)
 
-    reset()
+    config_reset()
 
 
-def reset() -> None:
+def config_reset() -> None:
     global BIN_PATHS
     global CONFIG
     global CONFIGS_FOUND
@@ -75,7 +75,7 @@ def reset() -> None:
             CONFIG.add_section(section)
 
 
-def write() -> None:
+def config_write() -> None:
     f = open(CONFIGS_FOUND[-1], "w")
     CONFIG.write(f)
     f.close()

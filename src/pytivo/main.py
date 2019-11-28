@@ -20,7 +20,7 @@ except:
     pass
 
 from pytivo.beacon import Beacon
-from pytivo.config import init, init_logging, getPort, getShares, getBeaconAddresses
+from pytivo.config import config_init, init_logging, getPort, getShares, getBeaconAddresses
 from pytivo.httpserver import TivoHTTPServer, TivoHTTPHandler
 
 
@@ -49,7 +49,7 @@ def last_date() -> str:
 
 
 def setup(in_service: bool = False) -> TivoHTTPServer:
-    init(sys.argv[1:])
+    config_init(sys.argv[1:])
     init_logging()
     sys.excepthook = exceptionLogger
 

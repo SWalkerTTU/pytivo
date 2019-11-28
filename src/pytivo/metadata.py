@@ -24,7 +24,7 @@ except:
 
 import mutagen  # type: ignore
 
-from pytivo.config import get_bin, getFFmpegWait, get_server, init
+from pytivo.config import get_bin, getFFmpegWait, get_server
 from pytivo.lrucache import LRUCache
 from pytivo.turing import Turing
 

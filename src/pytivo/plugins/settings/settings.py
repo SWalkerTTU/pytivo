@@ -6,7 +6,7 @@ from urllib.parse import quote
 from Cheetah.Template import Template  # type: ignore
 
 from . import buildhelp
-from pytivo.config import reset, CONFIG, write
+from pytivo.config import config_reset, CONFIG, config_write
 from pytivo.plugin import Plugin, read_tmpl
 from pytivo.pytivo_types import Query
 
@@ -61,14 +61,14 @@ class Settings(Plugin):
             handler.send_error(501)
 
     def Reset(self, handler: "TivoHTTPHandler", query: Query) -> None:
-        reset()
+        config_reset()
         handler.server.reset()
         handler.redir(RESET_MSG, 3)
         logging.getLogger("pyTivo.settings").info("pyTivo has been soft reset.")
 
     def Settings(self, handler: "TivoHTTPHandler", query: Query) -> None:
         # Read config file new each time in case there was any outside edits
-        reset()
+        config_reset()
 
         shares_data = []
         for section in CONFIG.sections():
@@ -125,7 +125,7 @@ class Settings(Plugin):
             CONFIG.set(section, new_setting, new_value)
 
     def UpdateSettings(self, handler: "TivoHTTPHandler", query: Query) -> None:
-        reset()
+        config_reset()
         for section in ["Server", "_tivo_SD", "_tivo_HD"]:
             self.each_section(query, section, section)
 
@@ -142,6 +142,6 @@ class Settings(Plugin):
 
         if query["new_Section"][0] != " ":
             CONFIG.add_section(query["new_Section"][0])
-        write()
+        config_write()
 
         handler.redir(SETTINGS_MSG, 5)
