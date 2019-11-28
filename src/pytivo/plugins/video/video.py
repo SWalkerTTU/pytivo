@@ -36,6 +36,8 @@ from pytivo.metadata import (
     get_stars,
     get_tv,
     human_size,
+    video_info,
+    INFO_CACHE,
 )
 from . import transcode
 from pytivo.plugin import Plugin, quote, read_tmpl
@@ -260,7 +262,7 @@ class Video(Plugin):
         )
 
     def __duration(self, full_path: str) -> Optional[float]:
-        return transcode.video_info(full_path).millisecs
+        return video_info(full_path).millisecs
 
     def __total_items(self, full_path: str) -> int:
         count = 0
@@ -274,7 +276,7 @@ class Video(Plugin):
                 elif use_extensions:
                     if os.path.splitext(f)[1].lower() in EXTENSIONS:
                         count += 1
-                elif f in transcode.INFO_CACHE:
+                elif f in INFO_CACHE:
                     if transcode.supported_format(f):
                         count += 1
         except:
@@ -306,7 +308,7 @@ class Video(Plugin):
         mtime: Optional[float] = None,
     ) -> Dict[str, Any]:
         data: Dict[str, Any] = {}
-        vInfo = transcode.video_info(full_path)
+        vInfo = video_info(full_path)
 
         if vInfo.vHeight is None or vInfo.vWidth is None:
             LOGGER.error("vInfo.vHeight or vInfo.vWidth is None")
@@ -441,7 +443,7 @@ class Video(Plugin):
                 video["small_path"] = subcname + "/" + video["name"]
                 video["total_items"] = self.__total_items(f.name)
             else:
-                if len(files) == 1 or f.name in transcode.INFO_CACHE:
+                if len(files) == 1 or f.name in INFO_CACHE:
                     video["valid"] = transcode.supported_format(f.name)
                     if video["valid"]:
                         video.update(self.metadata_full(f.name, tsn, mtime=mtime))

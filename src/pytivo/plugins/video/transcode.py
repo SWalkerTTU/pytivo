@@ -2,7 +2,6 @@ import logging
 import math
 import os
 import re
-import shlex
 import shutil
 import subprocess
 import sys
@@ -43,8 +42,7 @@ from pytivo.config import (
     nearestTivoWidth,
     strtod,
 )
-from pytivo.lrucache import LRUCache
-from pytivo.metadata import from_text
+from pytivo.metadata import video_info, VideoInfo
 
 LOGGER = logging.getLogger("pyTivo.video.transcode")
 
@@ -65,7 +63,6 @@ class FfmpegProcess:
         self.blocks = blocks
 
 
-INFO_CACHE = LRUCache(1000)
 # TODO 20191126: possibly make FFMPEG_PROCS a class to check heterogneous types
 #   see @dataclass in python 3.7+
 FFMPEG_PROCS: Dict[str, FfmpegProcess] = {}
@@ -78,28 +75,6 @@ MAXBLOCKS = 2
 TIMEOUT = 600
 
 T = TypeVar("T")
-
-
-class VideoInfo(NamedTuple):
-    Supported: bool  # is this tivo-supported
-    aCh: Optional[int] = None  # number of audio channels
-    aCodec: Optional[str] = None  # audio codec
-    aFreq: Optional[str] = None  # audio sample rate, number in string?
-    aKbps: Optional[int] = None  # but always cast to int
-    container: Optional[str] = None  # av container file format
-    dar1: Optional[str] = None  # Desired? Aspect Ratio
-    kbps: Optional[int] = None  # but always used as int
-    mapAudio: Optional[List[Tuple[str, str]]] = None
-    mapVideo: Optional[str] = None
-    millisecs: Optional[float] = None  # duration? ffmpeg Override_millisecs
-    par: Optional[str] = None  # string version of float? "1.232"?
-    par1: Optional[str] = None  # string version e.g. "4:3"
-    par2: Optional[float] = None  # float version of ratio
-    rawmeta: Optional[Dict[str, str]] = None
-    vCodec: Optional[str] = None
-    vFps: Optional[str] = None  # string of float (maybe could be float)
-    vHeight: Optional[int] = None  # video file height
-    vWidth: Optional[int] = None  # video file height
 
 
 # TODO: No more subprocess.Popen._make_inheritable, need to verify on Windows
@@ -822,257 +797,6 @@ def tivo_compatible(inFile: str, tsn: str = "", mime: str = "") -> Tuple[bool, s
         "TRANSCODE=%s, %s, %s" % (["YES", "NO"][message[0]], message[1], inFile)
     )
     return message
-
-
-def video_info(inFile: str, cache: bool = True) -> VideoInfo:
-    vInfo: Dict[str, Any] = {}
-    mtime = os.path.getmtime(inFile)
-    if cache:
-        if inFile in INFO_CACHE and INFO_CACHE[inFile][0] == mtime:
-            LOGGER.debug("CACHE HIT! %s" % inFile)
-            return INFO_CACHE[inFile][1]
-
-    vInfo["Supported"] = True
-
-    ffmpeg_path = get_bin("ffmpeg")
-    if ffmpeg_path is None:
-        if os.path.splitext(inFile)[1].lower() not in [
-            ".mpg",
-            ".mpeg",
-            ".vob",
-            ".tivo",
-            ".ts",
-        ]:
-            vInfo["Supported"] = False
-        vInfo.update({"millisecs": 0, "vWidth": 704, "vHeight": 480, "rawmeta": {}})
-        vid_info = VideoInfo(**vInfo)
-        if cache:
-            INFO_CACHE[inFile] = (mtime, vid_info)
-        return vid_info
-
-    cmd = [ffmpeg_path, "-i", inFile]
-    # Windows and other OS buffer 4096 and ffmpeg can output more than that.
-    err_tmp = tempfile.TemporaryFile()
-    ffmpeg = subprocess.Popen(
-        cmd, stderr=err_tmp, stdout=subprocess.PIPE, stdin=subprocess.PIPE
-    )
-
-    # wait configured # of seconds: if ffmpeg is not back give up
-    limit = getFFmpegWait()
-    if limit:
-        for i in range(limit * 20):
-            time.sleep(0.05)
-            if not ffmpeg.poll() is None:
-                break
-
-        if ffmpeg.poll() is None:
-            kill(ffmpeg)
-            vInfo["Supported"] = False
-            vid_info = VideoInfo(**vInfo)
-            if cache:
-                INFO_CACHE[inFile] = (mtime, vid_info)
-            return vid_info
-    else:
-        ffmpeg.wait()
-
-    err_tmp.seek(0)
-    output = err_tmp.read().decode("utf-8")
-    err_tmp.close()
-    LOGGER.debug("ffmpeg output=%s" % output)
-
-    attrs = {
-        "container": r"Input #0, ([^,]+),",
-        "vCodec": r"Video: ([^, ]+)",  # video codec
-        "aKbps": r".*Audio: .+, (.+) (?:kb/s).*",  # audio bitrate
-        "aCodec": r".*Audio: ([^, ]+)",  # audio codec
-        "aFreq": r".*Audio: .+, (.+) (?:Hz).*",  # audio frequency
-        "mapVideo": r"([0-9]+[.:]+[0-9]+).*: Video:.*",
-    }  # video mapping
-
-    for attr in attrs:
-        rezre = re.compile(attrs[attr])
-        x = rezre.search(output)
-        if x:
-            if attr in ["aKbps"]:
-                vInfo[attr] = int(x.group(1))
-            else:
-                vInfo[attr] = x.group(1)
-        else:
-            if attr in ["container", "vCodec"]:
-                vInfo[attr] = ""
-                vInfo["Supported"] = False
-            else:
-                vInfo[attr] = None
-            LOGGER.debug("failed at " + attr)
-
-    rezre = re.compile(
-        r".*Audio: .+, (?:(\d+)(?:(?:\.(\d).*)?(?: channels.*)?)|(stereo|mono)),.*"
-    )
-    x = rezre.search(output)
-    if x:
-        if x.group(3):
-            if x.group(3) == "stereo":
-                vInfo["aCh"] = 2
-            elif x.group(3) == "mono":
-                vInfo["aCh"] = 1
-        elif x.group(2):
-            vInfo["aCh"] = int(x.group(1)) + int(x.group(2))
-        elif x.group(1):
-            vInfo["aCh"] = int(x.group(1))
-        else:
-            vInfo["aCh"] = None
-            LOGGER.debug("failed at aCh")
-    else:
-        vInfo["aCh"] = None
-        LOGGER.debug("failed at aCh")
-
-    rezre = re.compile(r".*Video: .+, (\d+)x(\d+)[, ].*")
-    x = rezre.search(output)
-    if x:
-        vInfo["vWidth"] = int(x.group(1))
-        vInfo["vHeight"] = int(x.group(2))
-    else:
-        vInfo["vWidth"] = None
-        vInfo["vHeight"] = None
-        vInfo["Supported"] = False
-        LOGGER.debug("failed at vWidth/vHeight")
-
-    rezre = re.compile(r".*Video: .+, (.+) (?:fps|tb\(r\)|tbr).*")
-    x = rezre.search(output)
-    if x:
-        vInfo["vFps"] = x.group(1)
-        if "." not in vInfo["vFps"]:
-            vInfo["vFps"] += ".00"
-
-        # Allow override only if it is mpeg2 and frame rate was doubled
-        # to 59.94
-
-        if vInfo["vCodec"] == "mpeg2video" and vInfo["vFps"] != "29.97":
-            # First look for the build 7215 version
-            rezre = re.compile(r".*film source: 29.97.*")
-            x = rezre.search(output.lower())
-            if x:
-                LOGGER.debug("film source: 29.97 setting vFps to 29.97")
-                vInfo["vFps"] = "29.97"
-            else:
-                # for build 8047:
-                rezre = re.compile(
-                    r".*frame rate differs from container " + r"frame rate: 29.97.*"
-                )
-                LOGGER.debug("Bug in VideoReDo")
-                x = rezre.search(output.lower())
-                if x:
-                    vInfo["vFps"] = "29.97"
-    else:
-        vInfo["vFps"] = ""
-        vInfo["Supported"] = False
-        LOGGER.debug("failed at vFps")
-
-    durre = re.compile(r".*Duration: ([0-9]+):([0-9]+):([0-9]+)\.([0-9]+),")
-    d = durre.search(output)
-
-    if d:
-        vInfo["millisecs"] = (
-            int(d.group(1)) * 3600 + int(d.group(2)) * 60 + int(d.group(3))
-        ) * 1000 + int(d.group(4)) * (10 ** (3 - len(d.group(4))))
-    else:
-        vInfo["millisecs"] = 0
-
-    # get bitrate of source for tivo compatibility test.
-    rezre = re.compile(r".*bitrate: (.+) (?:kb/s).*")
-    x = rezre.search(output)
-    if x:
-        vInfo["kbps"] = int(x.group(1))
-    else:
-        # Fallback method of getting video bitrate
-        # Sample line:  Stream #0.0[0x1e0]: Video: mpeg2video, yuv420p,
-        #               720x480 [PAR 32:27 DAR 16:9], 9800 kb/s, 59.94 tb(r)
-        rezre = re.compile(
-            r".*Stream #0\.0\[.*\]: Video: mpeg2video, "
-            + r"\S+, \S+ \[.*\], (\d+) (?:kb/s).*"
-        )
-        x = rezre.search(output)
-        if x:
-            vInfo["kbps"] = int(x.group(1))
-        else:
-            vInfo["kbps"] = None
-            LOGGER.debug("failed at kbps")
-
-    # get par.
-    rezre = re.compile(r".*Video: .+PAR ([0-9]+):([0-9]+) DAR [0-9:]+.*")
-    x = rezre.search(output)
-    if x and x.group(1) != "0" and x.group(2) != "0":
-        vInfo["par1"] = x.group(1) + ":" + x.group(2)
-        vInfo["par2"] = float(x.group(1)) / float(x.group(2))
-    else:
-        vInfo["par1"], vInfo["par2"] = None, None
-
-    # get dar.
-    rezre = re.compile(r".*Video: .+DAR ([0-9]+):([0-9]+).*")
-    x = rezre.search(output)
-    if x and x.group(1) != "0" and x.group(2) != "0":
-        vInfo["dar1"] = x.group(1) + ":" + x.group(2)
-    else:
-        vInfo["dar1"] = None
-
-    # get Audio Stream mapping.
-    rezre = re.compile(r"([0-9]+[.:]+[0-9]+)(.*): Audio:(.*)")
-    x = rezre.search(output)
-    amap = []
-    if x:
-        for x in rezre.finditer(output):
-            amap.append((x.group(1), x.group(2) + x.group(3)))
-    else:
-        amap.append(("", ""))
-        LOGGER.debug("failed at mapAudio")
-    vInfo["mapAudio"] = amap
-
-    vInfo["par"] = None
-
-    # get Metadata dump (newer ffmpeg).
-    lines = output.split("\n")
-    rawmeta = {}
-    flag = False
-
-    for line in lines:
-        if line.startswith("  Metadata:"):
-            flag = True
-        else:
-            if flag:
-                if line.startswith("  Duration:"):
-                    flag = False
-                else:
-                    try:
-                        key, value = [x.strip() for x in line.split(":", 1)]
-                        rawmeta[key] = [value]
-                    except:
-                        pass
-
-    vInfo["rawmeta"] = rawmeta
-
-    data = from_text(inFile)
-    for key in data:
-        if key.startswith("Override_"):
-            vInfo["Supported"] = True
-            if key.startswith("Override_mapAudio"):
-                audiomap = dict(vInfo["mapAudio"])
-                newmap = shlex.split(data[key])
-                audiomap.update(list(zip(newmap[::2], newmap[1::2])))
-                vInfo["mapAudio"] = sorted(
-                    list(audiomap.items()), key=lambda k_v: (k_v[0], k_v[1])
-                )
-            elif key.startswith("Override_millisecs"):
-                vInfo[key.replace("Override_", "")] = int(data[key])
-            else:
-                vInfo[key.replace("Override_", "")] = data[key]
-
-    if cache:
-        INFO_CACHE[inFile] = (mtime, vInfo)
-    LOGGER.debug("; ".join(["%s=%s" % (k, v) for k, v in list(vInfo.items())]))
-    vid_info = VideoInfo(**vInfo)
-    if cache:
-        INFO_CACHE[inFile] = (mtime, vid_info)
-    return vid_info
 
 
 def audio_check(inFile: str, tsn: str) -> Optional[VideoInfo]:
