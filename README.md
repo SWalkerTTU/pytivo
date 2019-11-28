@@ -83,4 +83,4 @@ pyTivo was created by Jason Michalski ("armooo"). Contributors include
 Kevin R. Keegan, William McBrine, and Terry Mound ("wgw").
 
 This conversion to python 3 and refactoring was carried out by Matthew A. Clapp
-("itsayellow")
+("[itsayellow](https://github.com/itsayellow)")
