@@ -7,7 +7,6 @@ import re
 import socket
 import sys
 import uuid
-from configparser import NoOptionError
 from functools import reduce
 from typing import Dict, List, Optional, Tuple
 

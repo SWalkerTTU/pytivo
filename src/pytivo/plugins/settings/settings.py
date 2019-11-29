@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING
 from urllib.parse import quote
 
 from Cheetah.Template import Template  # type: ignore
@@ -19,16 +19,16 @@ CLASS_NAME = "Settings"
 
 # Some error/status message templates
 
-RESET_MSG = """<h3>Soft Reset</h3> <p>pyTivo has reloaded the 
-pyTivo.conf file and all changes should now be in effect.</p>"""
+RESET_MSG = """<h3>Soft Reset</h3> <p>pyTivo has reloaded the
+ pyTivo.conf file and all changes should now be in effect.</p>"""
 
 RESTART_MSG = """<h3>Restart</h3> <p>pyTivo will now restart.</p>"""
 
 GOODBYE_MSG = "Goodbye.\n"
 
-SETTINGS_MSG = """<h3>Settings Saved</h3> <p>Your settings have been 
-saved to the pyTivo.conf file. However you may need to do a <b>Soft 
-Reset</b> or <b>Restart</b> before these changes will take effect.</p>"""
+SETTINGS_MSG = """<h3>Settings Saved</h3> <p>Your settings have been
+ saved to the pyTivo.conf file. However you may need to do a <b>Soft
+ Reset</b> or <b>Restart</b> before these changes will take effect.</p>"""
 
 # Preload the templates
 SETTINGS_TCLASS = Template.compile(

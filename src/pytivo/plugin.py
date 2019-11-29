@@ -1,14 +1,11 @@
 import os
-import random
-import shutil
 import sys
 import threading
 import time
 from typing import List, Any, Tuple, TYPE_CHECKING, Optional, Callable, Union, Generic
-import urllib.request, urllib.parse, urllib.error
-from http.server import BaseHTTPRequestHandler
-
-from Cheetah.Filters import Filter  # type: ignore
+import urllib.request
+import urllib.parse
+import urllib.error
 
 from pytivo.lrucache import LRUCache
 from pytivo.pytivo_types import Query, FileData, FileDataLike
@@ -161,7 +158,7 @@ class Plugin:
                     anchor = anchor.replace(bs, "/", 1)
                 anchor = unquote(anchor)
                 anchor = anchor.replace(os.path.sep + cname, local_base_path, 1)
-                if not "://" in anchor:
+                if "://" not in anchor:
                     anchor = os.path.normpath(anchor)
 
                 # if type(files[0]) == str:
@@ -203,7 +200,6 @@ class Plugin:
         force_alpha: bool = False,
         allow_recurse: bool = True,
     ) -> Tuple[List[Any], int, int]:
-        subcname = query["Container"][0]
         path = self.get_local_path(handler, query)
 
         file_type = query.get("Filter", [""])[0]

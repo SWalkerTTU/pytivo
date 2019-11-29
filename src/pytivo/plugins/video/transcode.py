@@ -1,24 +1,13 @@
 import logging
 import math
 import os
-import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import threading
 import time
-from typing import (
-    Any,
-    BinaryIO,
-    Dict,
-    List,
-    NamedTuple,
-    Optional,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from typing import Any, BinaryIO, Dict, List, Optional, Tuple, TypeVar
 
 from pytivo.config import (
     get169Blacklist,
@@ -27,7 +16,6 @@ from pytivo.config import (
     getAudioBR,
     getBuffSize,
     getFFmpegPrams,
-    getFFmpegWait,
     getMaxAudioBR,
     getMaxVideoBR,
     getOptres,
@@ -686,7 +674,7 @@ def tivo_compatible_video(
         # HD Tivo detected, skipping remaining tests.
         return message
 
-    if not vInfo.vFps in ["29.97", "59.94"]:
+    if vInfo.vFps not in ["29.97", "59.94"]:
         return (False, "%s vFps, should be 29.97" % vInfo.vFps)
 
     if (get169Blacklist(tsn) and not get169Setting(tsn)) or (
@@ -841,7 +829,8 @@ def kill(popen: subprocess.Popen) -> None:
     if sys.platform == "win32":
         win32kill(popen.pid)
     else:
-        import os, signal
+        import os
+        import signal
 
         for i in range(3):
             LOGGER.debug("sending SIGTERM to pid: %s" % popen.pid)

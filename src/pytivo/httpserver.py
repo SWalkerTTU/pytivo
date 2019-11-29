@@ -7,8 +7,7 @@ import mimetypes
 import os
 import shutil
 import socket
-import time
-from io import StringIO, BytesIO
+from io import BytesIO
 from email.utils import formatdate
 from urllib.parse import unquote_plus, quote, parse_qs
 from xml.sax.saxutils import escape
@@ -122,7 +121,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         return host
 
     def version_string(self) -> str:
-        """ Override version_string() so it doesn't include the Python 
+        """ Override version_string() so it doesn't include the Python
             version.
 
         """
@@ -152,12 +151,12 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         if path == "/TiVoConnect":
             self.handle_query(query, tsn)
         else:
-            ## Get File
+            # Get File
             splitpath = [x for x in unquote_plus(path).split("/") if x]
             if splitpath:
                 self.handle_file(query, splitpath)
             else:
-                ## Not a file not a TiVo command
+                # Not a file not a TiVo command
                 self.infopage()
 
     def do_POST(self) -> None:
@@ -189,14 +188,13 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         return False
 
     def handle_query(self, query: Query, tsn: str) -> None:
-        mname = False
         if "Command" in query and len(query["Command"]) >= 1:
 
             command = query["Command"][0]
 
             # If we are looking at the root container
             if command == "QueryContainer" and (
-                not "Container" in query or query["Container"][0] == "/"
+                "Container" not in query or query["Container"][0] == "/"
             ):
                 self.root_container()
                 return
@@ -210,7 +208,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
             elif command == "QueryItem":
                 path = query.get("Url", [""])[0]
                 splitpath = [x for x in unquote_plus(path).split("/") if x]
-                if splitpath and not ".." in splitpath:
+                if splitpath and ".." not in splitpath:
                     if self.do_command(query, command, splitpath[0], tsn):
                         return
 
@@ -268,7 +266,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
 
     def handle_file(self, query: Query, splitpath: List[str]) -> None:
         if ".." not in splitpath:  # Protect against path exploits
-            ## Pass it off to a plugin?
+            # Pass it off to a plugin?
             for name, container in list(self.server.containers.items()):
                 if splitpath[0] == name:
                     self.cname = name
@@ -283,7 +281,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                         pass
                     return
 
-            ## Serve it from a "content" directory?
+            # Serve it from a "content" directory?
             base = os.path.join(SCRIPTDIR, *splitpath[:-1])
             path = os.path.join(base, "content", splitpath[-1])
 
@@ -291,7 +289,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                 self.send_content_file(path)
                 return
 
-        ## Give up
+        # Give up
         self.send_error(404)
 
     def authorize(self, tsn: Optional[str] = None) -> bool:

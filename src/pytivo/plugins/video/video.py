@@ -2,11 +2,8 @@ import calendar
 from functools import lru_cache
 import logging
 import os
-import re
 import struct
-import _thread
 import time
-import urllib.request, urllib.parse, urllib.error
 import zlib
 from collections.abc import MutableMapping
 from datetime import datetime, timedelta
@@ -123,7 +120,7 @@ class VideoDetails(MutableMapping):
     def __setitem__(self, key, value):
         self.d[key] = value
 
-    def __delitem__(self):
+    def __delitem__(self, key):
         del self.d[key]
 
     def keys(self):

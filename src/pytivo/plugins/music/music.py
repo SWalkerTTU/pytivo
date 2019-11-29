@@ -4,11 +4,11 @@ import random
 import re
 import shutil
 import subprocess
-import sys
 import time
 from typing import TYPE_CHECKING, Dict, Any, List, Optional, Union, Callable, Tuple
-import unicodedata
-import urllib.request, urllib.parse, urllib.error
+import urllib.request
+import urllib.parse
+import urllib.error
 from xml.sax.saxutils import escape
 
 import mutagen  # type: ignore
@@ -56,12 +56,12 @@ TAGNAMES = {
 BLOCKSIZE = 64 * 1024
 
 # Search strings for different playlist types
-asxfile = re.compile('ref +href *= *"([^"]*)"', re.IGNORECASE).search
-wplfile = re.compile('media +src *= *"([^"]*)"', re.IGNORECASE).search
-b4sfile = re.compile('Playstring="file:([^"]*)"').search
-plsfile = re.compile("[Ff]ile(\d+)=(.+)").match
-plstitle = re.compile("[Tt]itle(\d+)=(.+)").match
-plslength = re.compile("[Ll]ength(\d+)=(\d+)").match
+asxfile = re.compile(r'ref +href *= *"([^"]*)"', re.IGNORECASE).search
+wplfile = re.compile(r'media +src *= *"([^"]*)"', re.IGNORECASE).search
+b4sfile = re.compile(r'Playstring="file:([^"]*)"').search
+plsfile = re.compile(r"[Ff]ile(\d+)=(.+)").match
+plstitle = re.compile(r"[Tt]itle(\d+)=(.+)").match
+plslength = re.compile(r"[Ll]ength(\d+)=(\d+)").match
 
 # Duration -- parse from ffmpeg output
 durre = re.compile(r".*Duration: ([0-9]+):([0-9]+):([0-9]+)\.([0-9]+),").search
@@ -70,12 +70,16 @@ durre = re.compile(r".*Duration: ([0-9]+):([0-9]+):([0-9]+)\.([0-9]+),").search
 MUSIC_CONTAINER_TCLASS = Template.compile(
     file=os.path.join(SCRIPTDIR, "templates", "container.tmpl")
 )
-MUSIC_M3U_TCLASS = Template.compile(file=os.path.join(SCRIPTDIR, "templates", "m3u.tmpl"))
-MUSIC_ITEM_TCLASS = Template.compile(file=os.path.join(SCRIPTDIR, "templates", "item.tmpl"))
+MUSIC_M3U_TCLASS = Template.compile(
+    file=os.path.join(SCRIPTDIR, "templates", "m3u.tmpl")
+)
+MUSIC_ITEM_TCLASS = Template.compile(
+    file=os.path.join(SCRIPTDIR, "templates", "item.tmpl")
+)
 
 # TODO: No more subprocess.Popen._make_inheritable, need to verify on Windows
-## XXX BIG HACK
-## subprocess is broken for me on windows so super hack
+# XXX BIG HACK
+# subprocess is broken for me on windows so super hack
 # def patchSubprocess() -> None:
 #    o = subprocess.Popen._make_inheritable
 #
@@ -442,7 +446,7 @@ class Music(Plugin):
 
         # Expand relative paths
         for i in range(len(playlist)):
-            if not "://" in playlist[i].name:
+            if "://" not in playlist[i].name:
                 name = playlist[i].name
                 if not os.path.isabs(name):
                     name = os.path.join(local_path, name)

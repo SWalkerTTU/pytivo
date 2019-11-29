@@ -10,9 +10,8 @@ from typing import List, Dict, Optional
 
 import zeroconf
 
+import pytivo.config
 from pytivo.config import (
-    TIVOS,
-    TIVOS_FOUND,
     getBeaconAddresses,
     getGUID,
     getPort,
@@ -99,14 +98,14 @@ class ZCBroadcast:
         self.logger.info("Scanning for TiVos...")
 
         # Get the names of servers offering TiVo videos
-        browser = zeroconf.ServiceBrowser(self.rz, VIDS, listener=ZCListener(names))
+        _ = zeroconf.ServiceBrowser(self.rz, VIDS, listener=ZCListener(names))
 
         # Give them a second to respond
         time.sleep(1)
 
         # any results?
         if names:
-            TIVOS_FOUND = True
+            pytivo.config.TIVOS_FOUND = True
 
         # Now get the addresses -- this is the slow part
         for name in names:
@@ -116,8 +115,10 @@ class ZCBroadcast:
                 if tsn is not None:
                     address = socket.inet_ntoa(info.address)
                     port = info.port
-                    TIVOS[tsn] = Bdict({"name": name, "address": address, "port": port})
-                    TIVOS[tsn].update(info.properties)
+                    pytivo.config.TIVOS[tsn] = Bdict(
+                        {"name": name, "address": address, "port": port}
+                    )
+                    pytivo.config.TIVOS[tsn].update(info.properties)
                     self.logger.info(name)
 
         return names

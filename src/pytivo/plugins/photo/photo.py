@@ -29,13 +29,13 @@ import os
 import re
 import random
 import subprocess
-import sys
 import tempfile
 import threading
 import time
 from typing import TYPE_CHECKING, Optional, List, Any, Dict, Callable, Tuple, Union
-import unicodedata
-import urllib.request, urllib.parse, urllib.error
+import urllib.request
+import urllib.parse
+import urllib.error
 from io import BytesIO
 from xml.sax.saxutils import escape
 
@@ -92,6 +92,7 @@ IMAGE_FILE_EXTS = (
     ".nef",
 )
 
+# TODO 20191128: can re use bytes?  Does \d make sense?
 # Match Exif date -- YYYY:MM:DD HH:MM:SS
 exif_date = re.compile(b"(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)").search
 
@@ -195,7 +196,7 @@ class Photo(Plugin):
 
     def parse_exif(self, exif: bytes, rot: int, attrs: Dict[str, Any]) -> int:
         # Capture date
-        if attrs and not "odate" in attrs:
+        if attrs and "odate" not in attrs:
             date = exif_date(exif)
             if date:
                 year, month, day, hour, minute, second = (int(x) for x in date.groups())

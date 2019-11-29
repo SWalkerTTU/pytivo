@@ -5,7 +5,7 @@ import os
 import platform
 import sys
 import time
-from typing import Callable, Type
+from typing import Type
 from types import TracebackType
 
 if sys.version_info[0] != 3 or sys.version_info[1] < 6:
@@ -14,13 +14,18 @@ if sys.version_info[0] != 3 or sys.version_info[1] < 6:
 
 try:
     import ssl
-
     ssl._create_default_https_context = ssl._create_unverified_context
 except:
     pass
 
 from pytivo.beacon import Beacon
-from pytivo.config import config_init, init_logging, getPort, getShares, getBeaconAddresses
+from pytivo.config import (
+    config_init,
+    init_logging,
+    getPort,
+    getShares,
+    getBeaconAddresses,
+)
 from pytivo.httpserver import TivoHTTPServer, TivoHTTPHandler
 
 

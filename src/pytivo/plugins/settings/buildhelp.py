@@ -3,7 +3,7 @@ from typing import Dict, List
 
 SCRIPTDIR = os.path.dirname(__file__)
 
-## Build initial help list
+# Build initial help list
 help_list: Dict[str, List[str]] = {}
 title = ""
 settings_known: Dict[str, List[str]] = {}
@@ -47,7 +47,7 @@ try:
                     default[title] = data
 finally:
     f.close()
-## Done building help list
+# Done building help list
 plugins = [
     p
     for p in os.listdir(os.path.dirname(SCRIPTDIR))

@@ -2,13 +2,10 @@ from datetime import datetime
 from functools import lru_cache
 import hashlib
 import logging
-import logging
-import os
 import os
 import re
 import shlex
 import struct
-import subprocess
 import subprocess
 import sys
 import tempfile
@@ -472,7 +469,7 @@ def from_text(full_path: str) -> Dict[str, Any]:
                 for line in metafile_fh:
                     if line.startswith(BOM):
                         line = line[3:]
-                    if line.strip().startswith("#") or not sep in line:
+                    if line.strip().startswith("#") or sep not in line:
                         continue
                     key, value = [x.strip() for x in line.split(sep, 1)]
                     if not key or not value:
@@ -644,7 +641,7 @@ def _nfo_vitems(source: List[str], metadata: Dict[str, Any]) -> Dict[str, Any]:
         if data:
             metadata.setdefault(key, [])
             for dat in data:
-                if not dat in metadata[key]:
+                if dat not in metadata[key]:
                     metadata[key].append(dat)
 
     if "vGenre" in metadata:
@@ -1166,7 +1163,8 @@ def kill(popen: subprocess.Popen) -> None:
     if sys.platform == "win32":
         win32kill(popen.pid)
     else:
-        import os, signal
+        import os
+        import signal
 
         for i in range(3):
             LOGGER.debug("sending SIGTERM to pid: %s" % popen.pid)
