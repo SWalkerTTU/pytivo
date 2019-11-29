@@ -14,6 +14,7 @@ if sys.version_info[0] != 3 or sys.version_info[1] < 6:
 
 try:
     import ssl
+
     ssl._create_default_https_context = ssl._create_unverified_context
 except:
     pass
