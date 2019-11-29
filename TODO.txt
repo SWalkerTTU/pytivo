@@ -1,10 +1,9 @@
-argparse for command-line arguments
 check for / division that used to be integer and now needs to be //
 check all Any types to see if they can be more specific
     change Dict[str,Any] to NamedTuple
 check all encoding/decoding for proper (e.g. "utf-8"?)
-get_server, maybe replace arguments not used in every plugin with *args?
+plugin.get_files, maybe replace arguments not used in every plugin with *args?
 fix filter_types in QueryContainer
-Fix AudioFileFilter
+Fix music.AudioFileFilter
 f-strings
 pre-index all files in all shares for speed?
