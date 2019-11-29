@@ -12,8 +12,8 @@ from xml.sax.saxutils import escape
 
 from Cheetah.Template import Template  # type: ignore
 
+import pytivo.config
 from pytivo.config import (
-    TIVOS,
     getDebug,
     getGUID,
     getMaxAudioBR,
@@ -24,6 +24,7 @@ from pytivo.config import (
     get_ts_flag,
     is_ts_capable,
 )
+import pytivo.metadata
 from pytivo.metadata import (
     basic,
     from_mscore,
@@ -34,7 +35,6 @@ from pytivo.metadata import (
     get_tv,
     human_size,
     video_info,
-    INFO_CACHE,
 )
 from pytivo.plugins.video.transcode import (
     is_resumable,
@@ -168,7 +168,7 @@ class Video(Plugin):
         tsn = handler.headers.get("tsn", "")
         try:
             assert tsn
-            tivo_name = TIVOS[tsn].get("name", tsn)
+            tivo_name = pytivo.config.TIVOS[tsn].get("name", tsn)
         except:
             tivo_name = handler.address_string()
 
@@ -276,7 +276,7 @@ class Video(Plugin):
                 elif use_extensions:
                     if os.path.splitext(f)[1].lower() in EXTENSIONS:
                         count += 1
-                elif f in INFO_CACHE:
+                elif f in pytivo.metadata.INFO_CACHE:
                     if supported_format(f):
                         count += 1
         except:
@@ -443,7 +443,7 @@ class Video(Plugin):
                 video["small_path"] = subcname + "/" + video["name"]
                 video["total_items"] = self.__total_items(f.name)
             else:
-                if len(files) == 1 or f.name in INFO_CACHE:
+                if len(files) == 1 or f.name in pytivo.metadata.INFO_CACHE:
                     video["valid"] = supported_format(f.name)
                     if video["valid"]:
                         video.update(self.metadata_full(f.name, tsn, mtime=mtime))
@@ -477,7 +477,7 @@ class Video(Plugin):
         t.escape = escape
         t.crc = crc_str  # applied to (guid + name) and (guid + video.name)
         t.guid = getGUID()
-        t.tivos = TIVOS
+        t.tivos = pytivo.config.TIVOS
         handler.send_xml(str(t))
 
     def use_ts(self, tsn: str, file_path: str) -> bool:

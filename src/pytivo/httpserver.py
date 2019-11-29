@@ -15,14 +15,13 @@ from typing import Dict, Optional, List, Tuple
 
 from Cheetah.Template import Template  # type: ignore
 
+import pytivo.config
 from pytivo.config import (
     getShares,
     get_server,
     is_ts_capable,
     isTsnInConfig,
     getAllowedClients,
-    TIVOS,
-    TIVOS_FOUND,
 )
 from pytivo.plugin import GetPlugin
 from pytivo.beacon import Beacon
@@ -131,15 +130,15 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         tsn = self.headers.get("TiVo_TCD_ID", self.headers.get("tsn", ""))
         if not self.authorize(tsn):
             return
-        if tsn and (not TIVOS_FOUND or tsn in TIVOS):
-            attr = TIVOS.get(tsn, Bdict({}))
+        if tsn and (not pytivo.config.TIVOS_FOUND or tsn in pytivo.config.TIVOS):
+            attr = pytivo.config.TIVOS.get(tsn, Bdict({}))
             if "address" not in attr:
                 attr["address"] = self.address_string()
             if "name" not in attr:
                 if self.server.beacon is None:
                     raise Exception("No self.server.beacon")
                 attr["name"] = self.server.beacon.get_name(attr["address"])
-            TIVOS[tsn] = attr
+            pytivo.config.TIVOS[tsn] = attr
 
         if "?" in self.path:
             path, opts = self.path.split("?", 1)
@@ -392,16 +391,16 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                     + '">Settings</a><br>'
                 )
             elif plugin_type == "togo" and t.togo:
-                for tsn in TIVOS:
-                    if tsn and "address" in TIVOS[tsn]:
+                for tsn in pytivo.config.TIVOS:
+                    if tsn and "address" in pytivo.config.TIVOS[tsn]:
                         t.togo += (
                             '<a href="/TiVoConnect?'
                             + "Command=NPL&amp;Container="
                             + quote(section)
                             + "&amp;TiVo="
-                            + TIVOS[tsn]["address"]
+                            + pytivo.config.TIVOS[tsn]["address"]
                             + '">'
-                            + TIVOS[tsn]["name"]
+                            + pytivo.config.TIVOS[tsn]["name"]
                             + "</a><br>"
                         )
 

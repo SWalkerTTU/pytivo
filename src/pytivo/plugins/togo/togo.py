@@ -15,8 +15,8 @@ from xml.dom import minidom  # type: ignore
 
 from Cheetah.Template import Template  # type: ignore
 
+import pytivo.config
 from pytivo.config import (
-    TIVOS,
     getShares,
     get_bin,
     get_server,
@@ -166,7 +166,7 @@ class ToGo(Plugin):
         if "TiVo" in query:
             tivoIP = query["TiVo"][0]
             tsn = tivos_by_ip(tivoIP)
-            attrs = TIVOS[tsn]
+            attrs = pytivo.config.TIVOS[tsn]
             tivo_name = attrs.get("name", tivoIP)
             tivo_mak = get_tsn("tivo_mak", tsn)
             if tivo_mak is None:
@@ -354,7 +354,7 @@ class ToGo(Plugin):
             STATUS[url]["error"] = str(msg)
             return
 
-        tivo_name = TIVOS[tivos_by_ip(tivoIP)].get("name", tivoIP)
+        tivo_name = pytivo.config.TIVOS[tivos_by_ip(tivoIP)].get("name", tivoIP)
 
         logger.info(
             '[%s] Start getting "%s" from %s'

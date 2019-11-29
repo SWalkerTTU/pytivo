@@ -6,7 +6,8 @@ from urllib.parse import quote
 from Cheetah.Template import Template  # type: ignore
 
 from . import buildhelp
-from pytivo.config import config_reset, CONFIG, config_write
+import pytivo.config
+from pytivo.config import config_reset, config_write
 from pytivo.plugin import Plugin
 from pytivo.pytivo_types import Query
 
@@ -73,29 +74,34 @@ class Settings(Plugin):
         config_reset()
 
         shares_data = []
-        for section in CONFIG.sections():
+        for section in pytivo.config.CONFIG.sections():
             if not section.startswith(("_tivo_", "Server")):
-                if not (CONFIG.has_option(section, "type")) or CONFIG.get(
-                    section, "type"
-                ).lower() not in ["settings", "togo"]:
-                    shares_data.append((section, dict(CONFIG.items(section, raw=True))))
+                if not (
+                    pytivo.config.CONFIG.has_option(section, "type")
+                ) or pytivo.config.CONFIG.get(section, "type").lower() not in [
+                    "settings",
+                    "togo",
+                ]:
+                    shares_data.append(
+                        (section, dict(pytivo.config.CONFIG.items(section, raw=True)))
+                    )
 
         t = SETTINGS_TCLASS()
         t.mode = buildhelp.mode
         t.options = buildhelp.options
         t.container = handler.cname
         t.quote = quote
-        t.server_data = dict(CONFIG.items("Server", raw=True))
+        t.server_data = dict(pytivo.config.CONFIG.items("Server", raw=True))
         t.server_known = buildhelp.getknown("server")
-        t.hd_tivos_data = dict(CONFIG.items("_tivo_HD", raw=True))
+        t.hd_tivos_data = dict(pytivo.config.CONFIG.items("_tivo_HD", raw=True))
         t.hd_tivos_known = buildhelp.getknown("hd_tivos")
-        t.sd_tivos_data = dict(CONFIG.items("_tivo_SD", raw=True))
+        t.sd_tivos_data = dict(pytivo.config.CONFIG.items("_tivo_SD", raw=True))
         t.sd_tivos_known = buildhelp.getknown("sd_tivos")
         t.shares_data = shares_data
         t.shares_known = buildhelp.getknown("shares")
         t.tivos_data = [
-            (section, dict(CONFIG.items(section, raw=True)))
-            for section in CONFIG.sections()
+            (section, dict(pytivo.config.CONFIG.items(section, raw=True)))
+            for section in pytivo.config.CONFIG.sections()
             if section.startswith("_tivo_")
             and not section.startswith(("_tivo_SD", "_tivo_HD"))
         ]
@@ -106,25 +112,25 @@ class Settings(Plugin):
 
     def each_section(self, query: Query, label: str, section: str) -> None:
         new_setting = new_value = " "
-        if CONFIG.has_section(section):
-            CONFIG.remove_section(section)
-        CONFIG.add_section(section)
+        if pytivo.config.CONFIG.has_section(section):
+            pytivo.config.CONFIG.remove_section(section)
+        pytivo.config.CONFIG.add_section(section)
         for key, value_list in list(query.items()):
             key = key.replace("opts.", "", 1)
             if key.startswith(label + "."):
                 _, option = key.split(".")
                 default = buildhelp.default.get(option, " ")
                 value = value_list[0]
-                if not CONFIG.has_section(section):
-                    CONFIG.add_section(section)
+                if not pytivo.config.CONFIG.has_section(section):
+                    pytivo.config.CONFIG.add_section(section)
                 if option == "new__setting":
                     new_setting = value
                 elif option == "new__value":
                     new_value = value
                 elif value not in (" ", default):
-                    CONFIG.set(section, option, value)
+                    pytivo.config.CONFIG.set(section, option, value)
         if not (new_setting == " " and new_value == " "):
-            CONFIG.set(section, new_setting, new_value)
+            pytivo.config.CONFIG.set(section, new_setting, new_value)
 
     def UpdateSettings(self, handler: "TivoHTTPHandler", query: Query) -> None:
         config_reset()
@@ -135,15 +141,15 @@ class Settings(Plugin):
         for section in sections:
             ID, name = section.split("|")
             if query[ID][0] == "Delete_Me":
-                CONFIG.remove_section(name)
+                pytivo.config.CONFIG.remove_section(name)
                 continue
             if query[ID][0] != name:
-                CONFIG.remove_section(name)
-                CONFIG.add_section(query[ID][0])
+                pytivo.config.CONFIG.remove_section(name)
+                pytivo.config.CONFIG.add_section(query[ID][0])
             self.each_section(query, ID, query[ID][0])
 
         if query["new_Section"][0] != " ":
-            CONFIG.add_section(query["new_Section"][0])
+            pytivo.config.CONFIG.add_section(query["new_Section"][0])
         config_write()
 
         handler.redir(SETTINGS_MSG, 5)
