@@ -1,4 +1,5 @@
 import calendar
+from functools import lru_cache
 import logging
 import os
 import re
@@ -14,7 +15,6 @@ from xml.sax.saxutils import escape
 
 from Cheetah.Template import Template  # type: ignore
 
-from pytivo.lrucache import LRUCache
 from pytivo.config import (
     TIVOS,
     getDebug,
@@ -156,10 +156,7 @@ class VideoDetails(MutableMapping):
 
 
 class Video(Plugin):
-
     CONTENT_TYPE = "x-container/tivo-videos"
-
-    tvbus_cache = LRUCache(1)
 
     def video_file_filter(self, full_path: str, type: Optional[str] = None) -> bool:
         if os.path.isdir(full_path):
@@ -511,25 +508,22 @@ class Video(Plugin):
 
         return False
 
+    @lru_cache(maxsize=1)
     def get_details_xml(self, tsn: str, file_path: str) -> str:
         details: str
-        if (tsn, file_path) in self.tvbus_cache:
-            details = self.tvbus_cache[(tsn, file_path)]
-        else:
-            file_info = VideoDetails()
-            file_info["valid"] = supported_format(file_path)
-            if file_info["valid"]:
-                file_info.update(self.metadata_full(file_path, tsn))
+        file_info = VideoDetails()
+        file_info["valid"] = supported_format(file_path)
+        if file_info["valid"]:
+            file_info.update(self.metadata_full(file_path, tsn))
 
-            t = TVBUS_TCLASS()
-            t.video = file_info
-            t.escape = escape
-            t.get_tv = get_tv
-            t.get_mpaa = get_mpaa
-            t.get_stars = get_stars
-            t.get_color = get_color
-            details = str(t)
-            self.tvbus_cache[(tsn, file_path)] = details
+        t = TVBUS_TCLASS()
+        t.video = file_info
+        t.escape = escape
+        t.get_tv = get_tv
+        t.get_mpaa = get_mpaa
+        t.get_stars = get_stars
+        t.get_color = get_color
+        details = str(t)
         return details
 
     def tivo_header(self, tsn: str, path: str, mime: str) -> bytes:
