@@ -81,7 +81,7 @@ def process_command_line(argv):
         "-e",
         "--extraconf",
         action="store",
-        help="Specifies an extra configuration file to be after default "
+        help="Specifies an extra configuration file to be read after default "
         "locations are read.",
     )
 
