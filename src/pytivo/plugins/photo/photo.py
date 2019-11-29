@@ -94,11 +94,11 @@ IMAGE_FILE_EXTS = (
 
 # TODO 20191128: can re use bytes?  Does \d make sense?
 # Match Exif date -- YYYY:MM:DD HH:MM:SS
-exif_date = re.compile(b"(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)").search
+exif_date = re.compile(rb"(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)").search
 
 # Match Exif orientation, Intel and Motorola versions
-exif_orient_i = re.compile(b"\x12\x01\x03\x00\x01\x00\x00\x00(.)\x00\x00\x00").search
-exif_orient_m = re.compile(b"\x01\x12\x00\x03\x00\x00\x00\x01\x00(.)\x00\x00").search
+exif_orient_i = re.compile(rb"\x12\x01\x03\x00\x01\x00\x00\x00(.)\x00\x00\x00").search
+exif_orient_m = re.compile(rb"\x01\x12\x00\x03\x00\x00\x00\x01\x00(.)\x00\x00").search
 
 # Find size in FFmpeg output
 ffmpeg_size = re.compile(r".*Video: .+, (\d+)x(\d+)[, ].*")
