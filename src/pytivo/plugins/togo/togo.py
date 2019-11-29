@@ -77,7 +77,7 @@ UNABLE = """<h3>Unable to Connect to TiVo</h3> <p>pyTivo was unable to
  incorrect Media Access Key. Please return to the Settings page and
  double check your <b>tivo_mak</b> setting.</p> <pre>%s</pre>"""
 
-# Preload the templates
+# Compile the templates
 NPL_TCLASS = Template.compile(file=os.path.join(SCRIPTDIR, "templates", "npl.tmpl"))
 
 MSWINDOWS = sys.platform == "win32"

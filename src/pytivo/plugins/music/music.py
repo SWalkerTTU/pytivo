@@ -66,7 +66,7 @@ plslength = re.compile(r"[Ll]ength(\d+)=(\d+)").match
 # Duration -- parse from ffmpeg output
 durre = re.compile(r".*Duration: ([0-9]+):([0-9]+):([0-9]+)\.([0-9]+),").search
 
-# Preload the templates
+# Compile the templates
 MUSIC_CONTAINER_TCLASS = Template.compile(
     file=os.path.join(SCRIPTDIR, "templates", "container.tmpl")
 )

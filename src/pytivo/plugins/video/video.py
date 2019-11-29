@@ -57,7 +57,7 @@ SCRIPTDIR = os.path.dirname(__file__)
 
 CLASS_NAME = "Video"
 
-# Preload the templates
+# Compile the templates
 VIDEO_CONTAINER_XML_TCLASS = Template.compile(
     file=os.path.join(SCRIPTDIR, "templates", "container_xml.tmpl")
 )

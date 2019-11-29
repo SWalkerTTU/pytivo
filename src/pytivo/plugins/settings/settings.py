@@ -31,7 +31,7 @@ SETTINGS_MSG = """<h3>Settings Saved</h3> <p>Your settings have been
  saved to the pyTivo.conf file. However you may need to do a <b>Soft
  Reset</b> or <b>Restart</b> before these changes will take effect.</p>"""
 
-# Preload the templates
+# Compile the templates
 SETTINGS_TCLASS = Template.compile(
     file=os.path.join(SCRIPTDIR, "templates", "settings.tmpl")
 )

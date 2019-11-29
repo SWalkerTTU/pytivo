@@ -97,7 +97,7 @@ exif_orient_m = re.compile(b"\x01\x12\x00\x03\x00\x00\x00\x01\x00(.)\x00\x00").s
 # Find size in FFmpeg output
 ffmpeg_size = re.compile(r".*Video: .+, (\d+)x(\d+)[, ].*")
 
-# Preload the template
+# Compile the templates
 PHOTO_CONTAINER_TCLASS = Template.compile(
     file=os.path.join(SCRIPTDIR, "templates", "container.tmpl")
 )
