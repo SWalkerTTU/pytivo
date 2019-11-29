@@ -74,13 +74,13 @@ def process_command_line(argv):
     parser.add_argument(
         "-c",
         "--config",
-        action="store_true",
+        action="store",
         help="Specifies the sole configuration file to be used.",
     )
     parser.add_argument(
         "-e",
         "--extraconf",
-        action="store_true",
+        action="store",
         help="Specifies an extra configuration file to be after default "
         "locations are read.",
     )
