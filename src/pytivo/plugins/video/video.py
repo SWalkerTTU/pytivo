@@ -396,7 +396,6 @@ class Video(Plugin):
         return data
 
     def QueryContainer(self, handler: "TivoHTTPHandler", query: Query) -> None:
-        start_time = time.time()
         tsn = handler.headers.get("tsn", "")
         subcname = query["Container"][0]
         # e.g. Filter =
@@ -414,16 +413,14 @@ class Video(Plugin):
         else:
             allow_recurse = ar in ("1", "yes", "true", "on")
 
-        start_time2 = time.time()
         files, total, start = self.get_files(
             handler, query, self.video_file_filter, force_alpha, allow_recurse
         )
-        end_time_ms = (time.time() - start_time2) * 1000
-        LOGGER.info(f"get_files: {end_time_ms:.1f}ms")
 
         videos = []
         local_base_path = self.get_local_base_path(handler, query)
-        start_time3 = time.time()
+        start_time = time.time()
+        # This loop takes the most amount of time in the first query
         for f in files:
             video = VideoDetails()
             mtime = f.mdate
@@ -464,7 +461,7 @@ class Video(Plugin):
                 video["textSize"] = human_size(f.size)
 
             videos.append(video)
-        end_time_ms = (time.time() - start_time3) * 1000
+        end_time_ms = (time.time() - start_time) * 1000
         LOGGER.info(f"for f in files: {end_time_ms:.1f}ms")
 
         def crc_str(in_str: str) -> int:
@@ -482,8 +479,6 @@ class Video(Plugin):
         t.guid = getGUID()
         t.tivos = TIVOS
         handler.send_xml(str(t))
-        end_time_ms = (time.time() - start_time) * 1000
-        LOGGER.info(f"QueryContainer: {end_time_ms:.1f}ms")
 
     def use_ts(self, tsn: str, file_path: str) -> bool:
         if is_ts_capable(tsn):
