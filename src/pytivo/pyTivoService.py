@@ -20,7 +20,7 @@ class PyTivoService(win32serviceutil.ServiceFramework):
         self.stop_event = win32event.CreateEvent(None, 0, 0, None)
 
     def mainloop(self):
-        httpd = setup(True)
+        httpd = setup(in_service=True)
 
         while True:
             sys.stdout.flush()

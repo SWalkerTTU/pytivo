@@ -1,5 +1,4 @@
 import configparser
-import getopt
 import logging
 import logging.config
 import os
@@ -21,7 +20,7 @@ CONFIG = configparser.ConfigParser()
 CONFIGS_FOUND: List[str] = []
 
 
-def config_init(argv: List[str]) -> None:
+def config_init(config: Optional[str] = None, extraconf: Optional[str] = None) -> None:
     global TIVOS
     global GUID
     global CONFIG_FILES
@@ -34,16 +33,10 @@ def config_init(argv: List[str]) -> None:
     p = os.getcwd()
     CONFIG_FILES = ["/etc/pyTivo.conf", os.path.join(p, "pyTivo.conf")]
 
-    try:
-        opts, _ = getopt.getopt(argv, "c:e:", ["config=", "extraconf="])
-    except getopt.GetoptError as msg:
-        print(msg)
-
-    for opt, value in opts:
-        if opt in ("-c", "--config"):
-            CONFIG_FILES = [value]
-        elif opt in ("-e", "--extraconf"):
-            CONFIG_FILES.append(value)
+    if config is not None:
+        CONFIG_FILES = [config]
+    elif extraconf is not None:
+        CONFIG_FILES.append(extraconf)
 
     config_reset()
 

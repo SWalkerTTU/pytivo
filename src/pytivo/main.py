@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
-
+import argparse
 import logging
 import os
 import platform
 import sys
 import time
-from typing import Type
+from typing import Type, Optional
 from types import TracebackType
 
 if sys.version_info[0] != 3 or sys.version_info[1] < 6:
@@ -54,8 +53,48 @@ def last_date() -> str:
     return time.asctime(time.localtime(lasttime))
 
 
-def setup(in_service: bool = False) -> TivoHTTPServer:
-    config_init(sys.argv[1:])
+def process_command_line(argv):
+    """Process command line invocation arguments and switches.
+
+    Args:
+        argv: list of arguments, or `None` from ``sys.argv[1:]``.
+
+    Returns:
+        args: Namespace with named attributes of arguments and switches
+    """
+    # script_name = argv[0]
+    argv = argv[1:]
+
+    # initialize the parser object:
+    parser = argparse.ArgumentParser(description="A TiVo media server.")
+
+    # specifying nargs= puts outputs of parser in list (even if nargs=1)
+
+    # switches/options:
+    parser.add_argument(
+        "-c",
+        "--config",
+        action="store_true",
+        help="Specifies the sole configuration file to be used.",
+    )
+    parser.add_argument(
+        "-e",
+        "--extraconf",
+        action="store_true",
+        help="Specifies an extra configuration file to be after default "
+        "locations are read.",
+    )
+
+    args = parser.parse_args(argv)
+    return args
+
+
+def setup(
+    config: Optional[str] = None,
+    extraconf: Optional[str] = None,
+    in_service: bool = False,
+) -> TivoHTTPServer:
+    config_init(config=config, extraconf=extraconf)
     init_logging()
     sys.excepthook = exceptionLogger
 
@@ -91,16 +130,18 @@ def serve(httpd: TivoHTTPServer) -> None:
         pass
 
 
-def mainloop() -> bool:
-    httpd = setup()
+def mainloop(args: argparse.Namespace) -> bool:
+    httpd = setup(config=args.config, extraconf=args.extraconf)
     serve(httpd)
     if httpd.beacon is not None:
         httpd.beacon.stop()
     return httpd.restart
 
 
-def cli():
-    while mainloop():
+def cli() -> None:
+    args = process_command_line(sys.argv)
+
+    while mainloop(args):
         time.sleep(5)
 
 
