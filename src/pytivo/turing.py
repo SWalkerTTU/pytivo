@@ -315,7 +315,7 @@ class Turing:
         s = self.sbox
         return s[0][n[0]] ^ s[1][n[1]] ^ s[2][n[2]] ^ s[3][n[3]]
 
-    def setkey(self, key: bytes):
+    def setkey(self, key: bytes) -> None:
         """ Key the cipher.
             Table version; gathers words, mixes them, saves them.
             Then compiles lookup tables for the keyed S-boxes.

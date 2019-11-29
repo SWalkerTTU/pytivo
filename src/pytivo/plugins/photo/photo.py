@@ -54,13 +54,7 @@ from Cheetah.Template import Template  # type: ignore
 
 from pytivo.config import getFFmpegWait, get_bin
 from pytivo.lrucache import LRUCache
-from pytivo.plugin import (
-    Plugin,
-    SortList,
-    build_recursive_list,
-    quote,
-    unquote,
-)
+from pytivo.plugin import Plugin, SortList, build_recursive_list, quote, unquote
 from pytivo.plugins.video.transcode import kill
 from pytivo.pytivo_types import Query, FileData
 
@@ -147,7 +141,7 @@ class LockedLRUCache(LRUCache):
     def release(self) -> None:
         self.lock.release()
 
-    def __setitem__(self, key: str, obj: Any):
+    def __setitem__(self, key: str, obj: Any) -> None:
         self.acquire()
         try:
             LRUCache.__setitem__(self, key, obj)

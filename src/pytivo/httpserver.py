@@ -11,7 +11,7 @@ from io import BytesIO
 from email.utils import formatdate
 from urllib.parse import unquote_plus, quote, parse_qs
 from xml.sax.saxutils import escape
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple, Any
 
 from Cheetah.Template import Template  # type: ignore
 
@@ -304,8 +304,8 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.send_fixed(b"Unauthorized.", "text/plain", 403)
         return False
 
-    # TODO: typing for *args ??
-    def log_message(self, format: str, *args) -> None:
+    # TODO 20191128: This is never used
+    def log_message(self, format: str, *args: Any) -> None:
         self.server.logger.info(
             "%s [%s] %s"
             % (self.address_string(), self.log_date_time_string(), format % args)

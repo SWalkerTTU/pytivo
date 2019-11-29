@@ -225,7 +225,7 @@ class Beacon:
         """ For the direct-connect, TCP-style beacon """
         import _thread
 
-        def server():
+        def server() -> None:
             TCPSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             TCPSock.bind(("", 2190))
             TCPSock.listen(5)
@@ -264,7 +264,7 @@ class Beacon:
             return address
 
 
-def tsn_from_service_info(info) -> Optional[str]:
+def tsn_from_service_info(info: zeroconf.ServiceInfo) -> Optional[str]:
     tsn = info.properties.get(b"TSN")
     if get_server("togo_all", ""):
         tsn = info.properties.get(b"tsn", tsn)

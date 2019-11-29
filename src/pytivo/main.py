@@ -4,7 +4,7 @@ import os
 import platform
 import sys
 import time
-from typing import Type, Optional
+from typing import Type, Optional, List
 from types import TracebackType
 
 if sys.version_info[0] != 3 or sys.version_info[1] < 6:
@@ -53,7 +53,7 @@ def last_date() -> str:
     return time.asctime(time.localtime(lasttime))
 
 
-def process_command_line(argv):
+def process_command_line(argv: List[str]) -> argparse.Namespace:
     """Process command line invocation arguments and switches.
 
     Args:

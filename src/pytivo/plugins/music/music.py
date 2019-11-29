@@ -104,7 +104,7 @@ class FileDataMusic(FileData):
         self.duration = 0
 
 
-def get_tag(tagname, d):
+def get_tag(tagname: str, d: Dict[str, Any]) -> str:
     for tag in [tagname] + TAGNAMES[tagname]:
         try:
             if tag in d:

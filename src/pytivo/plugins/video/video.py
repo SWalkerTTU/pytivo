@@ -7,7 +7,7 @@ import time
 import zlib
 from collections.abc import MutableMapping
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Optional, List, Dict, Any
+from typing import TYPE_CHECKING, Optional, List, Dict, Any, AbstractSet, Iterator
 from xml.sax.saxutils import escape
 
 from Cheetah.Template import Template  # type: ignore
@@ -103,39 +103,40 @@ def pad(length: int, align: int) -> int:
 # TODO 20191125: can probably be replaced with NamedTuple
 # dict, but with specific defaults for certain keys
 class VideoDetails(MutableMapping):
-    def __init__(self, d=None):
-        if d:
+    def __init__(self, d: Optional[Dict[str, Any]] = None):
+        self.d: Dict[str, Any]
+        if d is not None:
             self.d = d
         else:
             self.d = {}
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         if key not in self.d:
             self.d[key] = self.default(key)
         return self.d[key]
 
-    def __contains__(self, key):
+    def __contains__(self, key: object) -> bool:
         return True
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> None:
         self.d[key] = value
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
         del self.d[key]
 
-    def keys(self):
-        return list(self.d.keys())
+    def keys(self) -> AbstractSet[Any]:
+        return self.d.keys()
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Any]:
         return self.d.__iter__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.d)
 
-    def iteritems(self):
+    def iteritems(self) -> Iterator[Any]:
         return iter(self.d.items())
 
-    def default(self, key):
+    def default(self, key: str) -> Any:
         defaults = {
             "showingBits": "0",
             "displayMajorNumber": "0",
