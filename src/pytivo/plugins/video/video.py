@@ -7,7 +7,7 @@ import time
 import zlib
 from collections.abc import MutableMapping
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Optional, List, Dict, Any, AbstractSet, Iterator
+from typing import TYPE_CHECKING, Optional, List, Dict, Any, Iterator
 from xml.sax.saxutils import escape
 
 from Cheetah.Template import Template  # type: ignore
@@ -115,26 +115,17 @@ class VideoDetails(MutableMapping):
             self.d[key] = self.default(key)
         return self.d[key]
 
-    def __contains__(self, key: object) -> bool:
-        return True
-
     def __setitem__(self, key: str, value: Any) -> None:
         self.d[key] = value
 
     def __delitem__(self, key: str) -> None:
         del self.d[key]
 
-    def keys(self) -> AbstractSet[Any]:
-        return self.d.keys()
-
     def __iter__(self) -> Iterator[Any]:
         return self.d.__iter__()
 
     def __len__(self) -> int:
         return len(self.d)
-
-    def iteritems(self) -> Iterator[Any]:
-        return iter(self.d.items())
 
     def default(self, key: str) -> Any:
         defaults = {
