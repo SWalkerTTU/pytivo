@@ -377,7 +377,6 @@ def select_videobr(inFile: str, tsn: str, mime: str = "") -> List[str]:
 def select_videostr(inFile: str, tsn: str, mime: str = "") -> int:
     vInfo = video_info(inFile)
     if tivo_compatible_video(vInfo, tsn, mime)[0] and vInfo.kbps is not None:
-        # TODO: tivo_compatible_video checks that vInfo.kbps is not None
         video_str = vInfo.kbps
         if vInfo.aKbps is not None:
             video_str -= vInfo.aKbps

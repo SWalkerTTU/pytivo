@@ -99,7 +99,6 @@ class Plugin:
 
     CONTENT_TYPE = ""
 
-    # TODO: use @functools.lru_cache instead
     recurse_cache = LRUCache(5)
     dir_cache = LRUCache(10)
 
@@ -210,9 +209,7 @@ class Plugin:
         recurse = allow_recurse and query.get("Recurse", ["No"])[0] == "Yes"
 
         filelist = SortList[FileData]([])
-        # TODO: use @functools.lru_cache instead (but mtime not supplied?)
         rc = self.recurse_cache
-        # TODO: use @functools.lru_cache instead (but mtime not supplied?)
         dc = self.dir_cache
         if recurse:
             if path in rc and rc.mtime(path) + 300 >= time.time():
@@ -233,8 +230,6 @@ class Plugin:
             if recurse:
                 rc[path] = filelist
             else:
-                # TODO 20191125: error here from lrucache line 159
-                # TypeError: '<' not supported between instances of '__Node' and '__Node'
                 dc[path] = filelist
 
         sortby = query.get("SortOrder", ["Normal"])[0]
