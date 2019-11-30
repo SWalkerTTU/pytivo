@@ -245,11 +245,11 @@ class Music(Plugin):
         # artist, album, track = f.name.split(os.path.sep)[-3:]
         # track = os.path.splitext(track)[0]
         # if track[0].isdigit:
-        #    track = ' '.join(track.split(' ')[1:])
+        #    track = " ".join(track.split(" ")[1:])
 
-        # item['SongTitle'] = track
-        # item['AlbumTitle'] = album
-        # item['ArtistName'] = artist
+        # item["SongTitle"] = track
+        # item["AlbumTitle"] = album
+        # item["ArtistName"] = artist
 
         ext = os.path.splitext(f.name)[1].lower()
 
@@ -407,7 +407,7 @@ class Music(Plugin):
                     f.duration = lengths[key]
                 playlist.append(f)
 
-        else:  # ext == '.m3u' or '.m3u8' or '.ram'
+        else:  # ext == ".m3u" or ".m3u8" or ".ram"
             duration, title = 0, ""
             playlist = []
             for line in list_file:
