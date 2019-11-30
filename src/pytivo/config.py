@@ -51,7 +51,10 @@ def config_reset() -> None:
 
     CONFIG = configparser.ConfigParser()
     CONFIGS_FOUND = CONFIG.read(CONFIG_FILES)
-    if not CONFIGS_FOUND:
+    if CONFIGS_FOUND:
+        for config_read in CONFIGS_FOUND:
+            print(f"Config file read: {config_read}")
+    else:
         print(("WARNING: pyTivo.conf does not exist.\n" + "Assuming default values."))
         CONFIGS_FOUND = CONFIG_FILES[-1:]
 
