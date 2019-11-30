@@ -305,13 +305,6 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.send_fixed(b"Unauthorized.", "text/plain", 403)
         return False
 
-    # TODO 20191128: This is never used
-    def log_message(self, format: str, *args: Any) -> None:
-        LOGGER.info(
-            "%s [%s] %s"
-            % (self.address_string(), self.log_date_time_string(), format % args)
-        )
-
     def send_fixed(
         self, data: bytes, mime: str, code: int = 200, refresh: str = ""
     ) -> None:

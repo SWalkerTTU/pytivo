@@ -34,11 +34,9 @@ class ZCListener:
     def __init__(self, names: List[str]) -> None:
         self.names = names
 
-    # TODO: what types for server, type_, name ??
     def remove_service(self, server: zeroconf.Zeroconf, type_: str, name: str) -> None:
         self.names.remove(name.replace("." + type_, ""))
 
-    # TODO: what types for server, type_, name ??
     def add_service(self, server: zeroconf.Zeroconf, type_: str, name: str) -> None:
         self.names.append(name.replace("." + type_, ""))
 
