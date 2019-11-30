@@ -1,9 +1,15 @@
 # setup for datadiary
 
-# import os.path
+import sys
 from setuptools import setup, find_packages
 
 # here = os.path.abspath(os.path.dirname(__file__))
+
+# extra windows-only executable
+if sys.platform == "win32":
+    extra_console_scripts = ["pytivoservice=pytivo.pyTivoService:cli"]
+else:
+    extra_console_scripts = []
 
 setup(
     name="pytivo",
@@ -30,6 +36,8 @@ setup(
         "Pillow",
         "pywin32;platform_system=='Windows'",
     ],
-    entry_points={"console_scripts": ["pytivo=pytivo.main:cli"]},
+    entry_points={
+        "console_scripts": ["pytivo=pytivo.main:cli"] + extra_console_scripts
+    },
     python_requires=">=3.6",
 )

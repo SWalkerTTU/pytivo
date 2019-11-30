@@ -48,5 +48,8 @@ class PyTivoService(win32serviceutil.ServiceFramework):
         win32event.SetEvent(self.stop_event)
 
 
-if __name__ == "__main__":
+def cli():
     win32serviceutil.HandleCommandLine(PyTivoService)
+
+if __name__ == "__main__":
+    cli()
