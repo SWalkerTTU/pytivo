@@ -13,7 +13,7 @@ This should work with macOS, Linux, and Windows.
 
 You need python 3.6 or greater installed on your system.
 
-For most video operations, you also need `ffmpeg` installed on your system.
+For most video operations, you also need [ffmpeg](https://www.ffmpeg.org/) installed on your system.
 
 ## "Easy" Install Instructions
 
