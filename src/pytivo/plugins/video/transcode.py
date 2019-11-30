@@ -51,8 +51,6 @@ class FfmpegProcess:
         self.blocks = blocks
 
 
-# TODO 20191126: possibly make FFMPEG_PROCS a class to check heterogneous types
-#   see @dataclass in python 3.7+
 FFMPEG_PROCS: Dict[str, FfmpegProcess] = {}
 REAPERS: Dict[str, Any] = {}
 

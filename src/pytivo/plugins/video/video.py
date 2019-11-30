@@ -100,8 +100,6 @@ def pad(length: int, align: int) -> int:
     return extra
 
 
-# TODO 20191125: can probably be replaced with NamedTuple
-# dict, but with specific defaults for certain keys
 class VideoDetails(MutableMapping):
     def __init__(self, d: Optional[Dict[str, Any]] = None):
         self.d: Dict[str, Any]
