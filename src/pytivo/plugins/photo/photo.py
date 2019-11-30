@@ -89,7 +89,6 @@ IMAGE_FILE_EXTS = (
     ".nef",
 )
 
-# TODO 20191128: can re use bytes?  Does \d make sense?
 # Match Exif date -- YYYY:MM:DD HH:MM:SS
 exif_date = re.compile(rb"(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)").search
 

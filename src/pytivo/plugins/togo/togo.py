@@ -38,7 +38,6 @@ SCRIPTDIR = os.path.dirname(__file__)
 CLASS_NAME = "ToGo"
 
 # Characters to remove from filenames
-
 BADCHAR = {
     "\\": "-",
     "/": "-",
@@ -54,11 +53,9 @@ BADCHAR = {
 }
 
 # Default top-level share path
-
 DEFPATH = "/TiVoConnect?Command=QueryContainer&Container=/NowPlaying"
 
 # Some error/status message templates
-
 MISSING = """<h3>Missing Data</h3> <p>You must set both "tivo_mak" and
  "togo_path" before using this function.</p>"""
 

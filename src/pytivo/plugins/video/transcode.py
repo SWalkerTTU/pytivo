@@ -65,23 +65,6 @@ TIMEOUT = 600
 T = TypeVar("T")
 
 
-# TODO: No more subprocess.Popen._make_inheritable, need to verify on Windows
-# XXX BIG HACK
-# subprocess is broken for me on windows so super hack
-# def patchSubprocess() -> None:
-#    o = subprocess.Popen._make_inheritable
-#
-#    def _make_inheritable(self, handle):
-#        if not handle:
-#            return subprocess.GetCurrentProcess()
-#        return o(self, handle)
-#
-#    subprocess.Popen._make_inheritable = _make_inheritable
-#
-# if MSWINDOWS:
-#    patchSubprocess()
-
-
 def transcode_settings(
     isQuery: bool, inFile: str, tsn: str = "", mime: str = ""
 ) -> List[str]:

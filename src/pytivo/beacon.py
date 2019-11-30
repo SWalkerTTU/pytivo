@@ -23,11 +23,11 @@ from pytivo.config import (
 from pytivo.plugin import GetPlugin
 from pytivo.pytivo_types import Bdict
 
+LOGGER = logging.getLogger(__name__)
+
 SHARE_TEMPLATE = "/TiVoConnect?Command=QueryContainer&Container=%s"
 PLATFORM_MAIN = "pyTivo"
 PLATFORM_VIDEO = "pc/pyTivo"  # For the nice icon
-
-LOGGER = logging.getLogger(__name__)
 
 
 class ZCListener:

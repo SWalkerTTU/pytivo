@@ -25,10 +25,9 @@ from pytivo.config import get_bin, getFFmpegWait, get_server
 from pytivo.lrucache import LRUCache
 from pytivo.turing import Turing
 
-INFO_CACHE = LRUCache(1000)
-
 LOGGER = logging.getLogger(__name__)
 
+INFO_CACHE = LRUCache(1000)
 
 # Something to strip
 TRIBUNE_CR = " Copyright Tribune Media Services, Inc."

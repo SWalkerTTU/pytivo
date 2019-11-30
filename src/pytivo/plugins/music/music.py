@@ -26,6 +26,8 @@ from pytivo.pytivo_types import Query, FileData
 if TYPE_CHECKING:
     from pytivo.httpserver import TivoHTTPHandler
 
+LOGGER = logging.getLogger(__name__)
+
 SCRIPTDIR = os.path.dirname(__file__)
 
 CLASS_NAME = "Music"
@@ -54,8 +56,6 @@ TAGNAMES = {
     "genre": ["\xa9gen", "WM/Genre"],
 }
 
-LOGGER = logging.getLogger(__name__)
-
 BLOCKSIZE = 64 * 1024
 
 # Search strings for different playlist types
@@ -79,24 +79,6 @@ MUSIC_M3U_TCLASS = Template.compile(
 MUSIC_ITEM_TCLASS = Template.compile(
     file=os.path.join(SCRIPTDIR, "templates", "item.tmpl")
 )
-
-# TODO: No more subprocess.Popen._make_inheritable, need to verify on Windows
-# XXX BIG HACK
-# subprocess is broken for me on windows so super hack
-# def patchSubprocess() -> None:
-#    o = subprocess.Popen._make_inheritable
-#
-#    def _make_inheritable(self, handle):
-#        if not handle:
-#            return subprocess.GetCurrentProcess()
-#        return o(self, handle)
-#
-#    subprocess.Popen._make_inheritable = _make_inheritable
-#
-#
-# mswindows = sys.platform == "win32"
-# if mswindows:
-#    patchSubprocess()
 
 
 class FileDataMusic(FileData):
