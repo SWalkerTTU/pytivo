@@ -70,6 +70,8 @@ pytivo -c <full-path-of-pyTivo.conf>
 
 ## Windows Service
 
+*Currently the `pytivoservice` tool is not functional.*
+
 Additionally on Windows, there is an extra console utility `pytivoservice` to
 install, remove, start, or stop pytivo as a service.
 
