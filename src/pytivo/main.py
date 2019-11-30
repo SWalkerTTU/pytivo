@@ -101,7 +101,6 @@ def setup(
     port = getPort()
 
     httpd = TivoHTTPServer(("", int(port)), TivoHTTPHandler)
-    print("after TivoHTTPServer, before logging.getLogger in main.py")
     logger = logging.getLogger("pyTivo")
     logger.info("Last modified: " + last_date())
     logger.info("Python: " + platform.python_version())

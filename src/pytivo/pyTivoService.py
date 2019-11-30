@@ -51,5 +51,6 @@ class PyTivoService(win32serviceutil.ServiceFramework):
 def cli():
     win32serviceutil.HandleCommandLine(PyTivoService)
 
+
 if __name__ == "__main__":
     cli()
