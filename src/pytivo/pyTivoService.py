@@ -35,7 +35,7 @@ class PyTivoService(win32serviceutil.ServiceFramework):
         return httpd.restart
 
     def SvcDoRun(self):
-        p = os.path.dirname(__file__)
+        p = os.getcwd()
 
         f = open(os.path.join(p, "log.txt"), "w")
         sys.stdout = f
