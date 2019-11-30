@@ -82,12 +82,7 @@ def GetPlugin(name: str) -> Union["Plugin", Error]:
         plugin = getattr(module, module.CLASS_NAME)()  # type: ignore
         return plugin
     except ImportError:
-        # TODO 20191124: log this error instead of printing
-        print(
-            "Error no", name, "plugin exists. Check the type " "setting for your share."
-        )
-        # TODO 20191124: Actually raise a real error instead of returning
-        #   this dumb error class
+        print(f"Error: no {name} plugin exists. Check the type setting for your share.")
         return Error()
 
 
