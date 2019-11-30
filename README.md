@@ -64,7 +64,7 @@ pytivo
 from the console.
 
 If the pyTivo.conf file that you want to use is somewhere else, use:
-```bash
+```
 pytivo -c <full-path-of-pyTivo.conf>
 ```
 
