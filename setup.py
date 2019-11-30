@@ -28,7 +28,7 @@ setup(
         "Cheetah3",
         "zeroconf",
         "Pillow",
-        "pywin32;platform_system='Windows'",
+        "pywin32;platform_system=='Windows'",
     ],
     entry_points={"console_scripts": ["pytivo=pytivo.main:cli"]},
     python_requires=">=3.6",
