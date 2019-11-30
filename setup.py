@@ -23,7 +23,7 @@ setup(
     include_package_data=True,  # to get templates and images
     packages=["pytivo"],
     package_dir={"": "src"},
-    install_requires=["mutagen", "Cheetah3", "zeroconf", "Pillow"],
+    install_requires=["mutagen", "Cheetah3", "zeroconf", "Pillow", "pywin32;platform_system='Windows'"],
     entry_points={"console_scripts": ["pytivo=pytivo.main:cli"]},
     python_requires=">=3.6",
 )
