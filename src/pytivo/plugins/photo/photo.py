@@ -44,12 +44,8 @@ use_pil = True
 try:
     from PIL import Image  # type: ignore
 except ImportError:
-    try:
-        # TODO 20191125: what the heck is this library?
-        import Image  # type: ignore
-    except ImportError:
-        use_pil = False
-        print("Python Imaging Library not found; using FFmpeg")
+    use_pil = False
+    print("Python Imaging Library not found; using FFmpeg")
 
 from Cheetah.Template import Template  # type: ignore
 
