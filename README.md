@@ -55,30 +55,38 @@ your TiVo.  You can specify multiple shares, even multiple shares of the same
 kind of media.  `path` is the absolute path to your media. `type` indicates
 whether the share is for `video` (most common) or `photos` or `music`.
 
-## Windows Notes
+# Running pytivo
 
-I have limited means of testing on Windows, and this fork of pytivo has been
-heavily revamped to port it to python 3.  Windows functionality therefore may
-be broken.  Also, the advanced Windows-only features below may not work.  I
-still include the notes below for reference.
-
-install pywin32 (only to install as a service) - 
-[http://sourceforge.net/project/showfiles.php?group_id=78018&package_id=79063]()
-- Windows users only and only if you intend to install as a service
-
+With the pyTivo.conf file in the current directory, simply run:
 ```bash
-pip install pywin32
+pytivo
+```
+from the console.
+
+If the pyTivo.conf file that you want to use is somewhere else, use:
+```bash
+pytivo -c <full-path-of-pyTivo.conf>
 ```
 
-### To Use as a Service in Windows
+## Windows Service
 
-#### To Install Service
+Additionally on Windows, there is an extra console utility `pytivoservice` to
+install, remove, start, or stop pytivo as a service.
 
-run pyTivoService.py --startup auto install
+### Install pytivo as a service
+```bash
+pytivoservice --startup auto install
+```
 
-#### To remove service
+### Remove the pytivo service
+```bash
+pytivoservice remove
+```
 
-run pyTivoService.py remove
+### Help on all pytivoservice subcommands
+```bash
+pytivoservice
+```
 
 # Credits
 pyTivo was created by Jason Michalski ("armooo"). Contributors include 
