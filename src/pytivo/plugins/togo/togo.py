@@ -31,10 +31,7 @@ from pytivo.pytivo_types import Query
 if TYPE_CHECKING:
     from pytivo.httpserver import TivoHTTPHandler
 
-LOGGER = logging.getLogger("pyTivo.togo")
-
-# TODO 20191129: what is this??
-tag_data = tag_data
+LOGGER = logging.getLogger(__name__)
 
 SCRIPTDIR = os.path.dirname(__file__)
 
