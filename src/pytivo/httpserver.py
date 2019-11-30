@@ -27,6 +27,8 @@ from pytivo.plugin import GetPlugin
 from pytivo.beacon import Beacon
 from pytivo.pytivo_types import Query, Settings, Bdict
 
+LOGGER = logging.getLogger(__name__)
+
 SCRIPTDIR = os.path.dirname(__file__)
 
 SERVER_INFO = """<?xml version="1.0" encoding="utf-8"?>
@@ -74,7 +76,6 @@ class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         self.beacon: Optional[Beacon] = None
         self.stop = False
         self.restart = False
-        self.logger = logging.getLogger("pyTivo")
         http.server.HTTPServer.__init__(self, server_address, RequestHandlerClass)
         self.daemon_threads = True
 
@@ -84,7 +85,7 @@ class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         try:
             self.containers[name] = settings
         except KeyError:
-            self.logger.error("Unable to add container " + name)
+            LOGGER.error("Unable to add container " + name)
 
     def reset(self) -> None:
         self.containers.clear()
@@ -92,7 +93,7 @@ class TivoHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
             self.add_container(section, settings)
 
     def handle_error(self, request: bytes, client_address: Tuple[str, int]) -> None:
-        self.logger.exception("Exception during request from %s" % (client_address,))
+        LOGGER.exception("Exception during request from %s" % (client_address,))
 
     def set_beacon(self, beacon: Beacon) -> None:
         self.beacon = beacon
@@ -306,7 +307,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
 
     # TODO 20191128: This is never used
     def log_message(self, format: str, *args: Any) -> None:
-        self.server.logger.info(
+        LOGGER.info(
             "%s [%s] %s"
             % (self.address_string(), self.log_date_time_string(), format % args)
         )
@@ -355,7 +356,7 @@ class TivoHTTPHandler(http.server.BaseHTTPRequestHandler):
                     settings["content_type"] = mime
                     tsncontainers.append((section, settings))
             except Exception as msg:
-                self.server.logger.error(section + " - " + str(msg), exc_info=True)
+                LOGGER.error(section + " - " + str(msg), exc_info=True)
 
         t = ROOT_CONTAINER_TCLASS()
 

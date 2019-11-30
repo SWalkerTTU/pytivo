@@ -32,7 +32,7 @@ from pytivo.config import (
 )
 from pytivo.metadata import video_info, VideoInfo
 
-LOGGER = logging.getLogger("pyTivo.video.transcode")
+LOGGER = logging.getLogger(__name__)
 
 
 class FfmpegProcess:

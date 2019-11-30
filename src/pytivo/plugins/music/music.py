@@ -1,4 +1,5 @@
 from functools import partial
+import logging
 import os
 import random
 import re
@@ -52,6 +53,8 @@ TAGNAMES = {
     "date": ["\xa9day", "WM/Year"],
     "genre": ["\xa9gen", "WM/Genre"],
 }
+
+LOGGER = logging.getLogger(__name__)
 
 BLOCKSIZE = 64 * 1024
 
@@ -166,7 +169,7 @@ class Music(Plugin):
             handler.send_header("Content-Length", str(fsize))
         else:
             if get_bin("ffmpeg") is None:
-                handler.server.logger.error("ffmpeg is not found.  Aborting transcode.")
+                LOGGER.error("ffmpeg is not found.  Aborting transcode.")
                 return
             handler.send_response(206)
             handler.send_header("Transfer-Encoding", "chunked")
@@ -194,7 +197,7 @@ class Music(Plugin):
                     handler.wfile.write(block)
                     handler.wfile.write(b"\r\n")
                 except Exception as msg:
-                    handler.server.logger.info(msg)
+                    LOGGER.info(msg)
                     kill(ffmpeg)
                     break
 
@@ -211,7 +214,7 @@ class Music(Plugin):
         try:
             handler.wfile.flush()
         except Exception as msg:
-            handler.server.logger.info(msg)
+            LOGGER.info(msg)
 
     # TODO 20191125: should this return only bool?
     def AudioFileFilter(
@@ -533,7 +536,7 @@ class Music(Plugin):
                         i = filelist.files.pop(index)
                         filelist.files.insert(0, i)
                     except ValueError:
-                        handler.server.logger.warning("Start not found: " + start)
+                        LOGGER.warning("Start not found: " + start)
             else:
                 # secondary by ascending name
                 filelist.files.sort(key=lambda x: x.name)
@@ -591,7 +594,7 @@ class Music(Plugin):
                     i = playlist.pop(index)
                     playlist.insert(0, i)
                 except ValueError:
-                    handler.server.logger.warning("Start not found: " + start)
+                    LOGGER.warning("Start not found: " + start)
 
         # Trim the list
         return self.item_count(handler, query, handler.cname, playlist)

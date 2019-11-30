@@ -28,14 +28,14 @@ from pytivo.config import (
 )
 from pytivo.httpserver import TivoHTTPServer, TivoHTTPHandler
 
+LOGGER = logging.getLogger(__name__)
+
 
 def exceptionLogger(
     type_: Type[BaseException], value: BaseException, traceback: TracebackType
 ) -> None:
     sys.excepthook = sys.__excepthook__
-    logging.getLogger("pyTivo").error(
-        "Exception in pyTivo", exc_info=(type_, value, traceback)
-    )
+    LOGGER.error("Exception in pyTivo", exc_info=(type_, value, traceback))
 
 
 def last_date() -> str:
@@ -101,10 +101,9 @@ def setup(
     port = getPort()
 
     httpd = TivoHTTPServer(("", int(port)), TivoHTTPHandler)
-    logger = logging.getLogger("pyTivo")
-    logger.info("Last modified: " + last_date())
-    logger.info("Python: " + platform.python_version())
-    logger.info("System: " + platform.platform())
+    LOGGER.info("Last modified: " + last_date())
+    LOGGER.info("Python: " + platform.python_version())
+    LOGGER.info("System: " + platform.platform())
 
     for section, settings in getShares():
         httpd.add_container(section, settings)
@@ -118,7 +117,7 @@ def setup(
     httpd.set_beacon(b)
     httpd.set_service_status(in_service)
 
-    logger.info("pyTivo is ready.")
+    LOGGER.info("pyTivo is ready.")
     return httpd
 
 

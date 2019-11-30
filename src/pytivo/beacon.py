@@ -27,6 +27,8 @@ SHARE_TEMPLATE = "/TiVoConnect?Command=QueryContainer&Container=%s"
 PLATFORM_MAIN = "pyTivo"
 PLATFORM_VIDEO = "pc/pyTivo"  # For the nice icon
 
+LOGGER = logging.getLogger(__name__)
+
 
 class ZCListener:
     def __init__(self, names: List[str]) -> None:
@@ -42,17 +44,16 @@ class ZCListener:
 
 
 class ZCBroadcast:
-    def __init__(self, logger: logging.Logger) -> None:
+    def __init__(self) -> None:
         """ Announce our shares via Zeroconf. """
         self.share_names: List[str] = []
         self.share_info: List[zeroconf.ServiceInfo] = []
-        self.logger = logger
         self.rz = zeroconf.Zeroconf()
         self.renamed: Dict[str, str] = {}
         old_titles = self.scan()
         address = socket.inet_aton(get_ip())
         port = int(getPort())
-        logger.info("Announcing shares...")
+        LOGGER.info("Announcing shares...")
         for section, settings in getShares():
             try:
                 ct = GetPlugin(settings["type"]).CONTENT_TYPE
@@ -63,7 +64,7 @@ class ZCBroadcast:
                     platform = PLATFORM_VIDEO
                 else:
                     platform = PLATFORM_MAIN
-                logger.info("Registering: %s" % section)
+                LOGGER.info("Registering: %s" % section)
                 self.share_names.append(section)
                 desc = {
                     "path": SHARE_TEMPLATE % quote(section),
@@ -95,7 +96,7 @@ class ZCBroadcast:
         VIDS = "_tivo-videos._tcp.local."
         names: List[str] = []
 
-        self.logger.info("Scanning for TiVos...")
+        LOGGER.info("Scanning for TiVos...")
 
         # Get the names of servers offering TiVo videos
         _ = zeroconf.ServiceBrowser(self.rz, VIDS, listener=ZCListener(names))
@@ -119,12 +120,12 @@ class ZCBroadcast:
                         {"name": name, "address": address, "port": port}
                     )
                     pytivo.config.TIVOS[tsn].update(info.properties)
-                    self.logger.info(name)
+                    LOGGER.info(name)
 
         return names
 
     def shutdown(self) -> None:
-        self.logger.info("Unregistering: %s" % " ".join(self.share_names))
+        LOGGER.info("Unregistering: %s" % " ".join(self.share_names))
         for info in self.share_info:
             self.rz.unregister_service(info)
         self.rz.close()
@@ -148,11 +149,10 @@ class Beacon:
                 break
 
         if get_zc():
-            logger = logging.getLogger("pyTivo.beacon")
             try:
-                self.bd = ZCBroadcast(logger)
+                self.bd = ZCBroadcast()
             except:
-                logger.error("Zeroconf failure", exc_info=True)
+                LOGGER.error("Zeroconf failure", exc_info=True)
                 self.bd = None
         else:
             self.bd = None

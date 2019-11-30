@@ -25,6 +25,7 @@
 # Version 0.1,  Dec. 7, 2007
 
 from functools import partial
+import logging
 import os
 import re
 import random
@@ -60,6 +61,8 @@ from pytivo.pytivo_types import Query, FileData
 
 if TYPE_CHECKING:
     from pytivo.httpserver import TivoHTTPHandler
+
+LOGGER = logging.getLogger(__name__)
 
 SCRIPTDIR = os.path.dirname(__file__)
 
@@ -457,7 +460,7 @@ class Photo(Plugin):
             # Send it
             send_jpeg(handler, result)
         else:
-            handler.server.logger.error(result)
+            LOGGER.error(result)
             handler.send_error(404)
 
     def media_data(self, f: FileData, local_base_path: str) -> Dict[str, Any]:
@@ -583,7 +586,7 @@ class Photo(Plugin):
                         i = filelist.files.pop(index)
                         filelist.files.insert(0, i)
                     except ValueError:
-                        handler.server.logger.warning("Start not found: " + start)
+                        LOGGER.warning("Start not found: " + start)
             else:
                 if "Type" in sortby:
                     # secondary by ascending name

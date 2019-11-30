@@ -14,6 +14,8 @@ from pytivo.pytivo_types import Query
 if TYPE_CHECKING:
     from pytivo.httpserver import TivoHTTPHandler
 
+LOGGER = logging.getLogger(__name__)
+
 SCRIPTDIR = os.path.dirname(__file__)
 
 CLASS_NAME = "Settings"
@@ -67,7 +69,7 @@ class Settings(Plugin):
         config_reset()
         handler.server.reset()
         handler.redir(RESET_MSG, 3)
-        logging.getLogger("pyTivo.settings").info("pyTivo has been soft reset.")
+        LOGGER.info("pyTivo has been soft reset.")
 
     def Settings(self, handler: "TivoHTTPHandler", query: Query) -> None:
         # Read config file new each time in case there was any outside edits

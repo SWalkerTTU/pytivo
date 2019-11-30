@@ -31,7 +31,9 @@ from pytivo.pytivo_types import Query
 if TYPE_CHECKING:
     from pytivo.httpserver import TivoHTTPHandler
 
-logger = logging.getLogger("pyTivo.togo")
+LOGGER = logging.getLogger("pyTivo.togo")
+
+# TODO 20191129: what is this??
 tag_data = tag_data
 
 SCRIPTDIR = os.path.dirname(__file__)
@@ -152,7 +154,7 @@ class ToGo(Plugin):
                     continue
 
                 # Log and throw the error otherwise
-                logger.error(e)
+                LOGGER.error(e)
                 raise
 
     def NPL(self, handler: "TivoHTTPHandler", query: Query) -> None:
@@ -356,7 +358,7 @@ class ToGo(Plugin):
 
         tivo_name = pytivo.config.TIVOS[tivos_by_ip(tivoIP)].get("name", tivoIP)
 
-        logger.info(
+        LOGGER.info(
             '[%s] Start getting "%s" from %s'
             % (time.strftime("%d/%b/%Y %H:%M:%S"), outfile, tivo_name)
         )
@@ -399,7 +401,7 @@ class ToGo(Plugin):
                 STATUS[url]["finished"] = True
         except Exception as msg:
             STATUS[url]["running"] = False
-            logger.info(msg)
+            LOGGER.info(msg)
         handle.close()
         f.close()
         STATUS[url]["size"] += length
@@ -409,7 +411,7 @@ class ToGo(Plugin):
                 mega_elapsed = 1
             size = STATUS[url]["size"]
             rate = size * 8.0 / mega_elapsed
-            logger.info(
+            LOGGER.info(
                 '[%s] Done getting "%s" from %s, %d bytes, %.2f Mb/s'
                 % (time.strftime("%d/%b/%Y %H:%M:%S"), outfile, tivo_name, size, rate)
             )
@@ -418,7 +420,7 @@ class ToGo(Plugin):
             os.remove(outfile)
             if STATUS[url]["save"]:
                 os.remove(outfile + ".txt")
-            logger.info(
+            LOGGER.info(
                 '[%s] Transfer of "%s" from %s aborted'
                 % (time.strftime("%d/%b/%Y %H:%M:%S"), outfile, tivo_name)
             )
@@ -464,7 +466,7 @@ class ToGo(Plugin):
                     _thread.start_new_thread(
                         ToGo.process_queue, (self, tivoIP, tivo_mak, togo_path)
                     )
-                logger.info(
+                LOGGER.info(
                     '[%s] Queued "%s" for transfer to %s'
                     % (time.strftime("%d/%b/%Y %H:%M:%S"), unquote(theurl), togo_path)
                 )
@@ -484,7 +486,7 @@ class ToGo(Plugin):
         tivoIP = query["TiVo"][0]
         del STATUS[theurl]
         QUEUE[tivoIP].remove(theurl)
-        logger.info(
+        LOGGER.info(
             '[%s] Removed "%s" from queue'
             % (time.strftime("%d/%b/%Y %H:%M:%S"), unquote(theurl))
         )

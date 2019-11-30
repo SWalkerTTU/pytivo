@@ -51,7 +51,7 @@ from pytivo.pytivo_types import Query
 if TYPE_CHECKING:
     from pytivo.httpserver import TivoHTTPHandler
 
-LOGGER = logging.getLogger("pyTivo.video.video")
+LOGGER = logging.getLogger(__name__)
 
 SCRIPTDIR = os.path.dirname(__file__)
 

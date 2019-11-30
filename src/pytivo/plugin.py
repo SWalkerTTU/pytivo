@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import threading
@@ -13,9 +14,11 @@ from pytivo.pytivo_types import Query, FileData, FileDataLike
 if TYPE_CHECKING:
     from pytivo.httpserver import TivoHTTPHandler
 
+LOGGER = logging.getLogger(__name__)
+
 
 def no_anchor(handler: "TivoHTTPHandler", anchor: str) -> None:
-    handler.server.logger.warning("Anchor not found: " + anchor)
+    LOGGER.warning("Anchor not found: " + anchor)
 
 
 # TODO 20191125 Maybe omit file_type if no filter functions use it?

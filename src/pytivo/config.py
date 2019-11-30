@@ -19,6 +19,8 @@ BIN_PATHS: Dict[str, str] = {}
 CONFIG = configparser.ConfigParser()
 CONFIGS_FOUND: List[str] = []
 
+LOGGER = logging.getLogger(__name__)
+
 
 def config_init(config: Optional[str] = None, extraconf: Optional[str] = None) -> None:
     global TIVOS
@@ -112,8 +114,7 @@ def get_zc() -> bool:
         for section in CONFIG.sections():
             if section.startswith("_tivo_"):
                 if CONFIG.has_option(section, "shares"):
-                    logger = logging.getLogger("pyTivo.config")
-                    logger.info("Shares security in use -- zeroconf disabled")
+                    LOGGER.info("Shares security in use -- zeroconf disabled")
                     return False
     elif opt in ["false", "no", "off"]:
         return False
@@ -230,8 +231,6 @@ def getOptres(tsn: str) -> bool:
 def get_bin(fname: str) -> Optional[str]:
     global BIN_PATHS
 
-    logger = logging.getLogger("pyTivo.config")
-
     if fname in BIN_PATHS:
         return BIN_PATHS[fname]
 
@@ -241,7 +240,7 @@ def get_bin(fname: str) -> Optional[str]:
             BIN_PATHS[fname] = fpath
             return fpath
         else:
-            logger.error("Bad %s path: %s" % (fname, fpath))
+            LOGGER.error("Bad %s path: %s" % (fname, fpath))
 
     if sys.platform == "win32":
         fext = ".exe"
@@ -259,7 +258,7 @@ def get_bin(fname: str) -> Optional[str]:
             BIN_PATHS[fname] = fpath
             return fpath
 
-    logger.warn("%s not found" % fname)
+    LOGGER.warn("%s not found" % fname)
     return None
 
 
