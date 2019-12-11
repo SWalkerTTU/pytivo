@@ -3,6 +3,7 @@ import logging
 import os
 import platform
 import sys
+import textwrap
 import time
 from typing import Type, Optional, List
 from types import TracebackType
@@ -19,6 +20,7 @@ except:
     pass
 
 from pytivo.beacon import Beacon
+import pytivo.config
 from pytivo.config import (
     config_init,
     init_logging,
@@ -65,8 +67,20 @@ def process_command_line(argv: List[str]) -> argparse.Namespace:
     # script_name = argv[0]
     argv = argv[1:]
 
+    main_help_text = textwrap.dedent(
+        """
+        A TiVo media server.
+
+        By default, reads the following config-file paths in order:
+            /etc/pyTivo.conf
+            ~/.config/pytivo/pyTivo.conf
+            ./pyTivo.conf
+        """
+    )
     # initialize the parser object:
-    parser = argparse.ArgumentParser(description="A TiVo media server.")
+    parser = argparse.ArgumentParser(
+        description=main_help_text, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
 
     # specifying nargs= puts outputs of parser in list (even if nargs=1)
 
