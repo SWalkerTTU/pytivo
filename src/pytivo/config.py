@@ -32,11 +32,10 @@ def config_init(config: Optional[str] = None, extraconf: Optional[str] = None) -
     GUID = uuid.uuid4()
     TIVOS_FOUND = False
 
-    p = os.getcwd()
     CONFIG_FILES = [
         "/etc/pyTivo.conf",
         os.path.expanduser("~/.config/pytivo/pyTivo.conf"),
-        os.path.join(p, "pyTivo.conf"),
+        os.path.join(os.getcwd(), "pyTivo.conf"),
     ]
 
     if config is not None:
