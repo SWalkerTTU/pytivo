@@ -17,19 +17,19 @@ For most video operations, you also need [ffmpeg](https://www.ffmpeg.org/) insta
 
 ## "Easy" Install Instructions
 
-The easiest way to install is to have the pipx package installed for your
-python
+This fork of pytivo is a python package, installable via `pip`, and thus also
+installable with [pipx](https://github.com/pipxproject/pipx). `pipx` isolates the python environment for pytivo from
+the rest of your system python, and puts the `pytivo` app executable in your
+user binary path.
+
+Install pipx package with your python
 ```bash
 pip install pipx
 ```
 
-This fork of pytivo is a python package, installable via `pip`, and thus also
-installable with `pipx`. `pipx` isolates the python environment for pytivo from
-the rest of your system python, and puts the `pytivo` app executable in your
-user binary path.
-
+Install pytivo using pipx
 ```bash
-pipx install --spec https://github.com/itsayellow/pytivo pytivo
+pipx install https://github.com/itsayellow/pytivo
 ```
 
 After using this pipx install method, you should be able to execute the
