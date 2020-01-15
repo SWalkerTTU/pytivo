@@ -58,7 +58,7 @@ whether the share is for `video` (most common) or `photos` or `music`.
 
 # Running pytivo
 
-With the pyTivo.conf file in the current directory, simply run:
+With the pyTivo.conf file in one of preset config file directories, simply run:
 ```bash
 pytivo
 ```
