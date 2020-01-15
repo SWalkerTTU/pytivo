@@ -37,9 +37,10 @@ After using this pipx install method, you should be able to execute the
 
 ## Editing pytivo.conf
 
-You need a valid `pyTivo.conf` file in either the directory where you execute
-`pytivo` (i.e. your current working directory), or in `/etc/pyTivo.conf`, or in
-a path specified with the `-c` option to pytivo.
+You need a valid `pyTivo.conf` file in either `/etc/pyTivo.conf`, in your
+home directory in `.config/pytivo/pyTivo.conf`, in the directory where you
+execute `pytivo` (i.e. your current working directory), or in a path 
+specified with the `-c` option to pytivo.
 
 You need to edit pyTivo.conf in at least 2 sections.
 
