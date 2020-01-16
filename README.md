@@ -22,15 +22,22 @@ installable with [pipx](https://github.com/pipxproject/pipx). `pipx` isolates th
 the rest of your system python, and puts the `pytivo` app executable in your
 user binary path.
 
-Install pipx package with your python
+1. Install pipx package with your python
 ```bash
 python3 -m pip install --user pipx
 ```
 
-Install pytivo using pipx
-```bash
-pipx install git+https://github.com/itsayellow/pytivo
-```
+2. Install pytivo using pipx.  There are two options for step 2, depending on whether you have [git](https://git-scm.com/) installed on your system:
+
+   A. If you have git installed on your system
+   ```bash
+   pipx install git+https://github.com/itsayellow/pytivo
+   ```
+
+   B. If you do not have git installed on your system, download the pytivo repository and unpack it to `<Some_Directory>/pytivo` (where `<Some_Directory>` is whatever directory is the parent of the `pytivo` directory), then execute:
+   ```bash
+   pipx install <Some_Directory>/pytivo
+   ```
 
 After using this pipx install method, you should be able to execute the
 `pytivo` command from your shell.
