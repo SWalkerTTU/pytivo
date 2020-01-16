@@ -29,7 +29,7 @@ pip install pipx
 
 Install pytivo using pipx
 ```bash
-pipx install https://github.com/itsayellow/pytivo
+pipx install git+https://github.com/itsayellow/pytivo
 ```
 
 After using this pipx install method, you should be able to execute the
