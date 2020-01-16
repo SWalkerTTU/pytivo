@@ -35,12 +35,14 @@ python3 -m pip install --user pipx
    ```
 
    B. If you do not have git installed on your system, download the pytivo repository and unpack it to `<Some_Directory>/pytivo` (where `<Some_Directory>` is whatever directory is the parent of the `pytivo` directory), then execute:
-   ```bash
+   ```
    pipx install <Some_Directory>/pytivo
    ```
 
+3. Execute `pytivo --help` to test that it is functional.
+
 After using this pipx install method, you should be able to execute the
-`pytivo` command from your shell.
+`pytivo` command from your shell.  It will be installed in your home directory in the subdirectory `.local/bin`
 
 ## Editing pytivo.conf
 
