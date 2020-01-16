@@ -24,7 +24,7 @@ user binary path.
 
 Install pipx package with your python
 ```bash
-pip install pipx
+python3 -m pip install --user pipx
 ```
 
 Install pytivo using pipx
