@@ -45,7 +45,7 @@ python3 -m pipx ensurepath
 After using this pipx install method, you should be able to execute the
 `pytivo` command from your shell.  It will be installed in your home directory in the subdirectory `.local/bin`
 
-## Editing pytivo.conf
+## Editing pyTivo.conf
 
 You need a valid `pyTivo.conf` file in either `/etc/pyTivo.conf`, in your
 home directory in `.config/pytivo/pyTivo.conf`, in the directory where you
