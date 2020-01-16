@@ -22,7 +22,7 @@ installable with [pipx](https://github.com/pipxproject/pipx). `pipx` isolates th
 the rest of your system python, and puts the `pytivo` app executable in your
 user binary path.
 
-1. Install pipx package with your python
+1. Install pipx using python
 ```bash
 python3 -m pip install --user pipx
 ```
