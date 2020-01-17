@@ -27,7 +27,7 @@ setup(
     keywords="tivo",
     url="https://github.com/itsayellow/pytivo",
     include_package_data=True,  # to get templates and images
-    packages=["pytivo"],
+    packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
         "mutagen",
