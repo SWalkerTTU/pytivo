@@ -22,24 +22,35 @@ installable with [pipx](https://github.com/pipxproject/pipx). `pipx` isolates th
 the rest of your system python, and puts the `pytivo` app executable in your
 user binary path.
 
-Install pipx package with your python
+1. Install pipx using python
 ```bash
-pip install pipx
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
 ```
 
-Install pytivo using pipx
-```bash
-pipx install https://github.com/itsayellow/pytivo
-```
+2. Install pytivo using pipx.  There are two options for step 2, depending on whether you have [git](https://git-scm.com/) installed on your system:
+
+   A. If you have git installed on your system
+   ```bash
+   pipx install git+https://github.com/itsayellow/pytivo
+   ```
+
+   B. If you do not have git installed on your system, download the pytivo repository and unpack it to `<Some_Directory>/pytivo` (where `<Some_Directory>` is whatever directory is the parent of the `pytivo` directory), then execute:
+   ```
+   pipx install <Some_Directory>/pytivo
+   ```
+
+3. Execute `pytivo --help` to test that it is functional.
 
 After using this pipx install method, you should be able to execute the
-`pytivo` command from your shell.
+`pytivo` command from your shell.  It will be installed in your home directory in the subdirectory `.local/bin`
 
-## Editing pytivo.conf
+## Editing pyTivo.conf
 
-You need a valid `pyTivo.conf` file in either the directory where you execute
-`pytivo` (i.e. your current working directory), or in `/etc/pyTivo.conf`, or in
-a path specified with the `-c` option to pytivo.
+You need a valid `pyTivo.conf` file in either `/etc/pyTivo.conf`, in your
+home directory in `.config/pytivo/pyTivo.conf`, in the directory where you
+execute `pytivo` (i.e. your current working directory), or in a path 
+specified with the `-c` option to pytivo.
 
 You need to edit pyTivo.conf in at least 2 sections.
 
@@ -57,7 +68,7 @@ whether the share is for `video` (most common) or `photos` or `music`.
 
 # Running pytivo
 
-With the pyTivo.conf file in the current directory, simply run:
+With the pyTivo.conf file in one of preset config file directories, simply run:
 ```bash
 pytivo
 ```
