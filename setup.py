@@ -30,7 +30,7 @@ setup(
     package_dir={"": "src"},
     package_data={
         # in any package, include template dirs and any files within
-        "": ["templates/*"]
+        "": ["templates/*", "help.txt"]
     },
     install_requires=[
         "mutagen",
