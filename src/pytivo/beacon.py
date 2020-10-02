@@ -112,7 +112,7 @@ class ZCBroadcast:
             if info:
                 tsn = tsn_from_service_info(info)
                 if tsn is not None:
-                    address = socket.inet_ntoa(info.address)
+                    address = socket.inet_ntoa(info.addresses[0])
                     port = info.port
                     pytivo.config.TIVOS[tsn] = Bdict(
                         {"name": name, "address": address, "port": port}

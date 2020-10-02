@@ -35,7 +35,7 @@ setup(
     install_requires=[
         "mutagen",
         "Cheetah3",
-        "zeroconf",
+        "zeroconf>0.23.0",
         "Pillow",
         "pywin32;platform_system=='Windows'",
     ],
