@@ -13,7 +13,7 @@ else:
 
 setup(
     name="pytivo",
-    version="0.1.0",
+    version="0.2.0",
     description=(
         "TiVo HMO and GoBack server.  Used to serve videos and other media "
         "to a TiVo from a computer."
