@@ -78,13 +78,13 @@ class ZCBroadcast:
                     title = "%s [%d]" % (section, count)
                     self.renamed[section] = title
                 info = zeroconf.ServiceInfo(
-                    "_%s._tcp.local." % tt,
-                    "%s._%s._tcp.local." % (title, tt),
-                    address,
-                    port,
-                    0,
-                    0,
-                    desc,
+                    type_="_%s._tcp.local." % tt,
+                    name="%s._%s._tcp.local." % (title, tt),
+                    port=port,
+                    weight=0,
+                    priority=0,
+                    properties=desc,
+                    addresses=[address],
                 )
                 self.rz.register_service(info)
                 self.share_info.append(info)
