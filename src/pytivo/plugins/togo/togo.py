@@ -322,7 +322,7 @@ class ToGo(Plugin):
             else:
                 name_list.insert(-1, " (PS)")
         name_list.insert(-1, ".")
-        name: str = "".join(name)
+        name: str = "".join(name_list)
         for ch in BADCHAR:
             name = name.replace(ch, BADCHAR[ch])
         outfile = os.path.join(togo_path, name)

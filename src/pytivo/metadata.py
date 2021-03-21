@@ -899,12 +899,12 @@ def dump(output: TextIO, metadata: Dict[str, Any]) -> None:
         value = metadata[key]
         if type(value) == list:
             for item in value:
-                output.write("%s: %s\n" % (key, item.encode("utf-8")))
+                output.write("%s: %s\n" % (key, item))
         else:
             if key in HUMAN and value in HUMAN[key]:
                 output.write("%s: %s\n" % (key, HUMAN[key][value]))
             else:
-                output.write("%s: %s\n" % (key, value.encode("utf-8")))
+                output.write("%s: %s\n" % (key, value))
 
 
 def video_info(inFile: str, cache: bool = True) -> VideoInfo:
