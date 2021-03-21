@@ -2,9 +2,9 @@ This fork is the python 3 port of pyTivo!
 
 # Description
 
-pyTivo lets you stream most videos from your PC to your unhacked tivo. 
-It uses the HMO server protocol. It will guess if your video is 4:3 or 
-16:9 and pad your video if it thinks it is needed. It will not transcode 
+pyTivo lets you stream most videos from your PC to your unhacked tivo.
+It uses the HMO server protocol. It will guess if your video is 4:3 or
+16:9 and pad your video if it thinks it is needed. It will not transcode
 an mpeg that is supported by your tivo.
 
 # Installation
@@ -32,7 +32,7 @@ python3 -m pipx ensurepath
 
    A. If you have git installed on your system
    ```bash
-   pipx install git+https://github.com/itsayellow/pytivo
+   pipx install --spec git+https://github.com/itsayellow/pytivo pytivo
    ```
 
    B. If you do not have git installed on your system, download the pytivo repository and unpack it to `<Some_Directory>/pytivo` (where `<Some_Directory>` is whatever directory is the parent of the `pytivo` directory), then execute:
@@ -49,7 +49,7 @@ After using this pipx install method, you should be able to execute the
 
 You need a valid `pyTivo.conf` file in either `/etc/pyTivo.conf`, in your
 home directory in `.config/pytivo/pyTivo.conf`, in the directory where you
-execute `pytivo` (i.e. your current working directory), or in a path 
+execute `pytivo` (i.e. your current working directory), or in a path
 specified with the `-c` option to pytivo.
 
 You need to edit pyTivo.conf in at least 2 sections.
@@ -102,7 +102,7 @@ pytivoservice
 ```
 
 # Credits
-pyTivo was created by Jason Michalski ("armooo"). Contributors include 
+pyTivo was created by Jason Michalski ("armooo"). Contributors include
 Kevin R. Keegan, William McBrine, and Terry Mound ("wgw").
 
 This conversion to python 3 and refactoring was carried out by Matthew A. Clapp
