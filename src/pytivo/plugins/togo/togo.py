@@ -123,6 +123,7 @@ TIVO_OPENER = urllib.request.build_opener(
     urllib.request.HTTPCookieProcessor(cj),
     urllib.request.HTTPBasicAuthHandler(AUTH_HANDLER),
     urllib.request.HTTPDigestAuthHandler(AUTH_HANDLER),
+    urllib.request.HTTPSHandler() ###
 )
 
 
