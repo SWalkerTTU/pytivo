@@ -1,4 +1,4 @@
-import cgi
+import html
 import http.cookiejar
 import logging
 import os
@@ -192,7 +192,7 @@ class ToGo(Plugin):
                 try:
                     page = self.tivo_open(theurl)
                 except IOError as e:
-                    handler.redir(UNABLE % (tivoIP, cgi.escape(str(e))), 10)
+                    handler.redir(UNABLE % (tivoIP, html.escape(str(e))), 10)
                     return
                 TIVO_CACHE[theurl] = {
                     "thepage": minidom.parse(page),
