@@ -40,10 +40,13 @@ class ZCListener:
     def add_service(self, server: zeroconf.Zeroconf, type_: str, name: str) -> None:
         self.names.append(name.replace("." + type_, ""))
 
+    def update_service(self, server: zeroconf.Zeroconf, type_: str, name: str) -> None:
+        pass
+
 
 class ZCBroadcast:
     def __init__(self) -> None:
-        """ Announce our shares via Zeroconf. """
+        """Announce our shares via Zeroconf."""
         self.share_names: List[str] = []
         self.share_info: List[zeroconf.ServiceInfo] = []
         self.rz = zeroconf.Zeroconf()
@@ -90,7 +93,7 @@ class ZCBroadcast:
                 self.share_info.append(info)
 
     def scan(self) -> List[str]:
-        """ Look for TiVos using Zeroconf. """
+        """Look for TiVos using Zeroconf."""
         VIDS = "_tivo-videos._tcp.local."
         names: List[str] = []
 
@@ -220,7 +223,7 @@ class Beacon:
         sock.sendall(struct.pack("!I", len(packet)) + packet)
 
     def listen(self) -> None:
-        """ For the direct-connect, TCP-style beacon """
+        """For the direct-connect, TCP-style beacon"""
         import _thread
 
         def server() -> None:
@@ -243,7 +246,7 @@ class Beacon:
         _thread.start_new_thread(server, ())
 
     def get_name(self, address: str) -> str:
-        """ Exchange beacons, and extract the machine name. """
+        """Exchange beacons, and extract the machine name."""
         our_beacon = self.format_beacon(b"connected", False)
 
         try:
