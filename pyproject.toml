@@ -1,6 +1,25 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "pytivo"
+version = "0.6.0"
+description = "TiVo HMO and GoBack server.  Used to serve videos and other media to a TiVo from a computer."
+authors = ["Matthew A. Clapp <itsayellow+dev@gmail.com>"]
+readme = "README.md"
+repository = "https://github.com/itsayellow/pytivo"
+
+[tool.poetry.dependencies]
+python = ">=3.6"
+mutagen = "*"
+Cheetah3 = "*"
+zeroconf = ">0.23.0"
+Pillow = "*"
+pywin32 = {version = "*", markers = "platform_system=='Windows'"}
+
+[tool.poetry.scripts]
+pytivo = "pytivo.main:cli"
 
 [tool.isort]
 profile = "black"
